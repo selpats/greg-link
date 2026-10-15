@@ -13,10 +13,8 @@ group = "cafe.zach"
 
 apply(from = "${rootProject.projectDir.parentFile}/gradle/shared/spotless.gradle")
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
-    }
+tasks.withType<JavaCompile> {
+    options.release.set(8)
 }
 
 publishing {

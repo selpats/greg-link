@@ -34,6 +34,21 @@ public class ChannelMapping {
     }
 
     public static ChannelMapping fromJson(JsonObject json) {
+        ChannelFilters filters = json.has("filters") ? ChannelFilters.fromJson(json.getAsJsonObject("filters"))
+            : new ChannelFilters(true);
+
+        if (json.has("relayCommands")) {
+            filters = new ChannelFilters(
+                filters.ignoreBots,
+                json.get("relayCommands")
+                    .getAsBoolean());
+        } else if (
+            json.has("ignoreCommands") && json.get("ignoreCommands")
+                .getAsBoolean()
+        ) {
+            filters = new ChannelFilters(filters.ignoreBots, false);
+        }
+
         return new ChannelMapping(
             json.has("id") ? json.get("id")
                 .getAsString() : "unnamed",
@@ -45,7 +60,7 @@ public class ChannelMapping {
                 : new ChannelDiscordConfig(true, false),
             json.has("minecraft") ? ChannelMinecraftConfig.fromJson(json.getAsJsonObject("minecraft"))
                 : new ChannelMinecraftConfig(java.util.Collections.singletonList("*")),
-            json.has("filters") ? ChannelFilters.fromJson(json.getAsJsonObject("filters")) : new ChannelFilters(true));
+            filters);
     }
 
     public JsonObject toJson() {

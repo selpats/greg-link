@@ -17,6 +17,10 @@ public class RelayCommandToDiscord {
                 .getChannelsForDimension(ChannelMinecraftConfig.WILDCARD);
 
             for (ChannelMapping mapping : mappings) {
+                if (!mapping.filters.relayCommands) {
+                    continue;
+                }
+
                 if (mapping.discord.chatsUseEmbeds) {
                     DiscordBridge.sendEmbedWithAvatar(
                         mapping.discordChannelId,
