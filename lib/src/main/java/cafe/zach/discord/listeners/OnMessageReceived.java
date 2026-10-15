@@ -1,5 +1,8 @@
 package cafe.zach.discord.listeners;
 
+import java.util.List;
+
+import net.dv8tion.jda.api.entities.sticker.StickerItem;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
@@ -17,11 +20,43 @@ public class OnMessageReceived extends ListenerAdapter {
                 .getSelfUser()
         ) return;
 
+        String content = event.getMessage()
+            .getContentDisplay();
+
+        List<StickerItem> stickers = event.getMessage()
+            .getStickers();
+        if (stickers != null && !stickers.isEmpty()) {
+            StringBuilder stickerText = new StringBuilder();
+            for (StickerItem sticker : stickers) {
+                String name = sticker.getName();
+                if (
+                    name != null && !name.trim()
+                        .isEmpty()
+                ) {
+                    if (stickerText.length() > 0) {
+                        stickerText.append(" ");
+                    }
+                    stickerText.append(":")
+                        .append(name.trim())
+                        .append(":");
+                }
+            }
+            if (stickerText.length() > 0) {
+                if (
+                    content == null || content.trim()
+                        .isEmpty()
+                ) {
+                    content = stickerText.toString();
+                } else {
+                    content = content + " " + stickerText.toString();
+                }
+            }
+        }
+
         DiscordContext context = DiscordContext.forMessage(
             event.getAuthor()
                 .getName(),
-            event.getMessage()
-                .getContentDisplay(),
+            content,
             event.getChannel()
                 .getId(),
             event.getGuild()
