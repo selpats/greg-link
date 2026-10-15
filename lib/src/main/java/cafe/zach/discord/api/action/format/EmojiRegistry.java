@@ -7,6 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,9 +26,11 @@ public class EmojiRegistry {
     private static final long RETRY_INTERVAL_MINUTES = 15;
 
     private static ScheduledExecutorService scheduler;
+    private static JDA cachedJda;
 
     public static synchronized void loadEmojis(JDA jda) {
         if (jda == null) return;
+        cachedJda = jda;
 
         if (scheduler == null || scheduler.isShutdown()) {
             scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -94,6 +98,65 @@ public class EmojiRegistry {
                     + MAX_RETRIES
                     + " retries: "
                     + (error != null ? error.getMessage() : "Unknown error"));
+        }
+    }
+
+    public static void refreshEmojis(Consumer<String> callback) {
+        if (cachedJda == null) {
+            if (callback != null) callback.accept("Discord bot is not connected.");
+            return;
+        }
+
+        List<Guild> guilds = cachedJda.getGuilds();
+        if (guilds.isEmpty()) {
+            if (callback != null) callback.accept("Discord bot is not in any servers/guilds.");
+            return;
+        }
+
+        AtomicInteger pending = new AtomicInteger(guilds.size());
+        Map<String, String> combined = new ConcurrentHashMap<>();
+        Map<String, String> combinedLower = new ConcurrentHashMap<>();
+
+        for (Guild guild : guilds) {
+            guild.retrieveEmojis()
+                .queue(emojis -> {
+                    for (RichCustomEmoji emoji : emojis) {
+                        String formatted = (emoji.isAnimated() ? "<a:" : "<:") + emoji.getName()
+                            + ":"
+                            + emoji.getId()
+                            + ">";
+                        combined.put(emoji.getName(), formatted);
+                        combinedLower.put(
+                            emoji.getName()
+                                .toLowerCase(),
+                            formatted);
+                    }
+                    if (pending.decrementAndGet() == 0) {
+                        EMOJI_MAP.clear();
+                        EMOJI_MAP.putAll(combined);
+                        EMOJI_MAP_LOWER.clear();
+                        EMOJI_MAP_LOWER.putAll(combinedLower);
+
+                        String msg = "Successfully refreshed custom emojis (" + EMOJI_MAP.size() + " total loaded)";
+                        System.out.println("[GregLink-Discord] " + msg);
+                        if (callback != null) callback.accept(msg);
+                    }
+                }, error -> {
+                    System.err.println(
+                        "[GregLink-Discord] Error refreshing emojis from " + guild.getName()
+                            + ": "
+                            + (error != null ? error.getMessage() : "Unknown error"));
+                    if (pending.decrementAndGet() == 0) {
+                        if (!combined.isEmpty()) {
+                            EMOJI_MAP.clear();
+                            EMOJI_MAP.putAll(combined);
+                            EMOJI_MAP_LOWER.clear();
+                            EMOJI_MAP_LOWER.putAll(combinedLower);
+                        }
+                        String msg = "Finished refreshing emojis (" + EMOJI_MAP.size() + " loaded)";
+                        if (callback != null) callback.accept(msg);
+                    }
+                });
         }
     }
 
