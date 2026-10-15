@@ -1,5 +1,10 @@
 package cafe.zach.discord.api.action.format;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
@@ -125,8 +130,39 @@ public class MessageFormatter {
 
     // Discord -> Minecraft
 
+    private static final Pattern EMOJI_LINK_PATTERN = Pattern.compile("\\[[^\\]]*\\]\\((https?://[^)\\s]+)\\)");
+    private static final Pattern EMOJI_NAME_PARAM_PATTERN = Pattern.compile("[?&]name=([^&\\s)]+)");
+
+    public static String replaceEmojiLinks(String content) {
+        if (content == null || content.isEmpty()) return content;
+        Matcher matcher = EMOJI_LINK_PATTERN.matcher(content);
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            String url = matcher.group(1);
+            if (url.contains("emojis") || url.contains("stickers")) {
+                Matcher nameMatcher = EMOJI_NAME_PARAM_PATTERN.matcher(url);
+                if (nameMatcher.find()) {
+                    try {
+                        String rawName = nameMatcher.group(1);
+                        String decoded = URLDecoder.decode(rawName, StandardCharsets.UTF_8.name());
+                        if (
+                            !decoded.trim()
+                                .isEmpty()
+                        ) {
+                            matcher.appendReplacement(sb, Matcher.quoteReplacement(":" + decoded + ":"));
+                            continue;
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
+    }
+
     public static String formatDiscordMessage(DiscordContext context) {
-        return String.format("[Discord] %s: %s", context.username, context.content);
+        return String.format("[Discord] %s: %s", context.username, replaceEmojiLinks(context.content));
     }
 
     public static String formatDiscordReady(DiscordContext context) {
