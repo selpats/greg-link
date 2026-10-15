@@ -1,11 +1,5 @@
 package cafe.zach.discord.api.action.format;
 
-import java.io.File;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +13,6 @@ import java.util.regex.Pattern;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
-
-import cafe.zach.discord.api.config.ConfigHandler;
 
 public class EmojiRegistry {
 
@@ -74,7 +66,6 @@ public class EmojiRegistry {
                         + " custom emojis from "
                         + guild.getName()
                         + (attempt > 0 ? " (retry #" + attempt + ")" : ""));
-                exportEmojisToFile();
             }, error -> { handleFailure(guild, attempt, error); });
     }
 
@@ -104,32 +95,6 @@ public class EmojiRegistry {
                     + " retries: "
                     + (error != null ? error.getMessage() : "Unknown error"));
         }
-    }
-
-    private static void exportEmojisToFile() {
-        try {
-            ConfigHandler handler = ConfigHandler.getInstance();
-            if (handler == null) return;
-            File configFile = handler.getConfigFile();
-            if (configFile == null) return;
-            File parent = configFile.getParentFile();
-            if (parent == null || !parent.exists()) return;
-
-            File exportFile = new File(parent, "emojis.txt");
-            List<String> lines = new ArrayList<>();
-            for (Map.Entry<String, String> entry : EMOJI_MAP.entrySet()) {
-                lines.add(":" + entry.getKey() + ": -> " + entry.getValue());
-            }
-            Collections.sort(lines);
-
-            try (Writer writer = new OutputStreamWriter(
-                Files.newOutputStream(exportFile.toPath()),
-                StandardCharsets.UTF_8)) {
-                for (String line : lines) {
-                    writer.write(line + "\n");
-                }
-            }
-        } catch (Throwable ignored) {}
     }
 
     public static String replaceEmojis(String text) {

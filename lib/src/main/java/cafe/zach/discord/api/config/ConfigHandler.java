@@ -43,7 +43,7 @@ public abstract class ConfigHandler {
         return INSTANCE;
     }
 
-    public abstract File getConfigFile();
+    protected abstract File getConfigFile();
 
     protected void onLoad(JsonObject json) {}
 

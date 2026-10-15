@@ -14,7 +14,7 @@ public class GregLinkConfig extends ConfigHandler {
     }
 
     @Override
-    public File getConfigFile() {
+    protected File getConfigFile() {
         return new File(
             Loader.instance()
                 .getConfigDir(),
