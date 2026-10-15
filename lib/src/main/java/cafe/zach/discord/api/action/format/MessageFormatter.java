@@ -20,24 +20,24 @@ public class MessageFormatter {
     // Minecraft -> Discord
 
     public static String formatChat(MinecraftContext context) {
-        return String.format("**%s** » %s", context.username, context.content);
+        return String.format("**%s** » %s", context.username, EmojiRegistry.replaceEmojis(context.content));
     }
 
     public static MessageEmbed embedChat(MinecraftContext context) {
         return new EmbedBuilder().setAuthor(context.username, null, "attachment://author.png")
-            .setDescription(context.content)
+            .setDescription(EmojiRegistry.replaceEmojis(context.content))
             .setColor(EmbedColors.CHAT)
             .build();
     }
 
     public static String formatChatCommand(MinecraftContext context) {
-        return String.format("**%s** ran: %s", context.username, context.content);
+        return String.format("**%s** ran: %s", context.username, EmojiRegistry.replaceEmojis(context.content));
     }
 
     public static MessageEmbed embedChatCommand(MinecraftContext context) {
         return new EmbedBuilder()
             .setAuthor(String.format("%s ran a command", context.username), null, "attachment://author.png")
-            .setDescription(context.content)
+            .setDescription(EmojiRegistry.replaceEmojis(context.content))
             .setColor(EmbedColors.COMMAND)
             .build();
     }

@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.FileUpload;
 
+import cafe.zach.discord.api.action.format.EmojiRegistry;
 import cafe.zach.discord.api.config.ConfigHandler;
 import cafe.zach.discord.api.exceptions.InvalidDiscordConfigurationException;
 import cafe.zach.discord.listeners.OnMessageReceived;
@@ -70,6 +71,8 @@ class DiscordService {
 
     public synchronized void destroy() {
         running.set(false);
+
+        EmojiRegistry.shutdown();
 
         if (api != null) {
             api.shutdown();
