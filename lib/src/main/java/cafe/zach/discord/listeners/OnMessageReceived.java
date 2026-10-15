@@ -15,6 +15,8 @@ public class OnMessageReceived extends ListenerAdapter {
 
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
+        if (!event.isFromGuild()) return;
+
         if (
             event.getAuthor() == event.getJDA()
                 .getSelfUser()

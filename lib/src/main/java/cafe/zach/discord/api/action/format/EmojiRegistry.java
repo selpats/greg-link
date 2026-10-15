@@ -122,11 +122,13 @@ public class EmojiRegistry {
             }
             Collections.sort(lines);
 
-            Writer writer = new OutputStreamWriter(Files.newOutputStream(exportFile.toPath()), StandardCharsets.UTF_8);
-            for (String line : lines) {
-                writer.write(line + "\n");
+            try (Writer writer = new OutputStreamWriter(
+                Files.newOutputStream(exportFile.toPath()),
+                StandardCharsets.UTF_8)) {
+                for (String line : lines) {
+                    writer.write(line + "\n");
+                }
             }
-            writer.close();
         } catch (Throwable ignored) {}
     }
 
