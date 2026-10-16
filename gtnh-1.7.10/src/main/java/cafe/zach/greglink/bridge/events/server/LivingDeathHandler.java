@@ -6,16 +6,18 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 
 import cafe.zach.discord.api.action.context.MinecraftContext;
 import cafe.zach.discord.api.action.registry.ActionRegistry;
+import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class LivingDeathHandler {
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onLivingDeath(LivingDeathEvent event) {
         if (!(event.entityLiving instanceof EntityPlayer player)) return;
         if (player instanceof FakePlayer) return;
+        if (player.worldObj == null || player.worldObj.provider == null) return;
 
-        String username = player.getDisplayName();
+        String username = player.getCommandSenderName();
         String uuid = player.getUniqueID()
             .toString();
 

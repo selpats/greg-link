@@ -32,6 +32,7 @@ public class BridgeManager {
     }
 
     public static void registerActions() {
+        ActionRegistry.clear();
         MinecraftActionRegistry.register();
         DiscordActionRegistry.register();
     }
@@ -45,7 +46,6 @@ public class BridgeManager {
     }
 
     public static void disconnect() {
-        ActionRegistry.clear();
         DiscordBridge.shutdown();
     }
 }

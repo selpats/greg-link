@@ -10,12 +10,13 @@ import net.minecraftforge.event.entity.player.AchievementEvent;
 
 import cafe.zach.discord.api.action.context.MinecraftContext;
 import cafe.zach.discord.api.action.registry.ActionRegistry;
+import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class AchievementHandler {
 
     private static Field statsField;
-    private static boolean statsFieldResolved = false;
+    private static volatile boolean statsFieldResolved = false;
 
     private static StatisticsFile getStatsFile(EntityPlayerMP player) {
         try {
@@ -38,13 +39,15 @@ public class AchievementHandler {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onAchievement(AchievementEvent event) {
         if (!(event.entityPlayer instanceof EntityPlayerMP)) return;
         if (event.entityPlayer instanceof FakePlayer) return;
 
         EntityPlayerMP player = (EntityPlayerMP) event.entityPlayer;
-        if (player.playerNetServerHandler == null) return;
+        if (player.playerNetServerHandler == null || player.worldObj == null || player.worldObj.provider == null) {
+            return;
+        }
 
         Achievement achievement = event.achievement;
         if (achievement == null) return;
@@ -58,7 +61,7 @@ public class AchievementHandler {
         // Only fire if the player can actually unlock this achievement
         if (!stats.canUnlockAchievement(achievement)) return;
 
-        String username = player.getDisplayName();
+        String username = player.getCommandSenderName();
         String uuid = player.getUniqueID()
             .toString();
         String achievementName = achievement.func_150951_e()

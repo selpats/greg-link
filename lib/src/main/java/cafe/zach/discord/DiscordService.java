@@ -1,8 +1,12 @@
 package cafe.zach.discord;
 
 import java.time.Duration;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import net.dv8tion.jda.api.JDA;
@@ -24,6 +28,7 @@ class DiscordService {
 
     private JDA api;
     private ExecutorService eventPool;
+    private ExecutorService avatarPool;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public DiscordService(ConfigHandler config) throws InterruptedException, InvalidDiscordConfigurationException {
@@ -37,6 +42,14 @@ class DiscordService {
             throw new IllegalStateException("DiscordService is already running — call restart() instead");
         }
 
+        if (
+            config == null || config.discordToken == null
+                || config.discordToken.trim()
+                    .isEmpty()
+        ) {
+            throw new InvalidDiscordConfigurationException("provided token is empty");
+        }
+
         try {
             eventPool = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "GregLink-Discord");
@@ -44,13 +57,14 @@ class DiscordService {
                 return t;
             });
 
+            avatarPool = new ThreadPoolExecutor(1, 2, 60L, TimeUnit.SECONDS, new ArrayBlockingQueue<>(64), r -> {
+                Thread t = new Thread(r, "GregLink-Avatar");
+                t.setDaemon(true);
+                return t;
+            }, new ThreadPoolExecutor.DiscardOldestPolicy());
+
             api = JDABuilder
-                .createLight(
-                    config.discordToken,
-                    GatewayIntent.GUILD_MESSAGES,
-                    GatewayIntent.MESSAGE_CONTENT,
-                    GatewayIntent.GUILD_MEMBERS,
-                    GatewayIntent.GUILD_MESSAGE_REACTIONS)
+                .createLight(config.discordToken, GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT)
                 .setEventPool(eventPool)
                 .addEventListeners(new ReadyListener(), new OnMessageReceived())
                 .build()
@@ -61,6 +75,14 @@ class DiscordService {
         } catch (InvalidTokenException | IllegalArgumentException e) {
             destroyPool();
             throw new InvalidDiscordConfigurationException("provided token is invalid");
+        } catch (InterruptedException e) {
+            destroyPool();
+            Thread.currentThread()
+                .interrupt();
+            throw e;
+        } catch (Throwable t) {
+            destroyPool();
+            throw new InvalidDiscordConfigurationException("failed to initialize JDA: " + t.getMessage());
         }
     }
 
@@ -96,10 +118,11 @@ class DiscordService {
                 if (!api.awaitShutdown(Duration.ofSeconds(5))) {
                     // if the queue is not empty after 5 seconds, force immediate shutdown
                     api.shutdownNow();
-                    api.awaitShutdown();
+                    api.awaitShutdown(Duration.ofSeconds(2));
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread()
+                    .interrupt();
             }
             api = null;
         }
@@ -154,15 +177,27 @@ class DiscordService {
 
     public void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier) {
         if (!running.get() || api == null) return;
-        ExecutorService pool = eventPool;
-        if (pool == null || pool.isShutdown()) {
-            sendEmbedWithAvatar(channelId, embed, AvatarUtil.fetchPaddedAvatar(avatarIdentifier));
+
+        byte[] cachedAvatar = AvatarUtil.getCachedAvatar(avatarIdentifier);
+        if (cachedAvatar != null) {
+            sendEmbedWithAvatar(channelId, embed, cachedAvatar);
             return;
         }
-        pool.execute(() -> {
-            byte[] avatar = AvatarUtil.fetchPaddedAvatar(avatarIdentifier);
-            sendEmbedWithAvatar(channelId, embed, avatar);
-        });
+
+        ExecutorService pool = avatarPool;
+        if (pool == null || pool.isShutdown()) {
+            sendEmbed(channelId, embed);
+            return;
+        }
+
+        try {
+            pool.execute(() -> {
+                byte[] avatar = AvatarUtil.fetchPaddedAvatar(avatarIdentifier);
+                sendEmbedWithAvatar(channelId, embed, avatar);
+            });
+        } catch (RejectedExecutionException ignored) {
+            sendEmbed(channelId, embed);
+        }
     }
 
     public boolean isRunning() {
@@ -170,6 +205,10 @@ class DiscordService {
     }
 
     private void destroyPool() {
+        if (avatarPool != null) {
+            avatarPool.shutdownNow();
+            avatarPool = null;
+        }
         if (eventPool != null) {
             eventPool.shutdownNow();
             eventPool = null;

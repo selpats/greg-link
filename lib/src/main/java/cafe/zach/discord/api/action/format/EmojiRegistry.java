@@ -1,11 +1,14 @@
 package cafe.zach.discord.api.action.format;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -20,7 +23,7 @@ public class EmojiRegistry {
 
     private static final Map<String, String> EMOJI_MAP = new ConcurrentHashMap<>();
     private static final Map<String, String> EMOJI_MAP_LOWER = new ConcurrentHashMap<>();
-    private static final Pattern MINECRAFT_EMOJI_PATTERN = Pattern.compile("(?<!<a?):([A-Za-z0-9_]{1,32}+):(?!\\d+>)");
+    private static final Pattern MINECRAFT_EMOJI_PATTERN = Pattern.compile("(?<!<a?):([A-Za-z0-9_]{2,32}+):(?!\\d+>)");
 
     private static final int MAX_RETRIES = 3;
     private static final long RETRY_INTERVAL_MINUTES = 15;
@@ -40,18 +43,23 @@ public class EmojiRegistry {
 
     private static synchronized ScheduledExecutorService getOrCreateScheduler() {
         if (scheduler == null || scheduler.isShutdown()) {
-            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1, r -> {
                 Thread t = new Thread(r, "GregLink-EmojiRetry");
                 t.setDaemon(true);
                 return t;
             });
+            exec.setRemoveOnCancelPolicy(true);
+            scheduler = exec;
         }
         return scheduler;
     }
 
     private static void fetchGuildEmojis(Guild guild, int attempt) {
+        if (guild == null || guild.getJDA() != cachedJda) return;
+
         guild.retrieveEmojis()
             .queue(emojis -> {
+                if (guild.getJDA() != cachedJda) return;
                 if (emojis == null) {
                     handleFailure(guild, attempt, new IllegalStateException("Guild returned null emoji list"));
                     return;
@@ -65,7 +73,7 @@ public class EmojiRegistry {
                     EMOJI_MAP.put(emoji.getName(), formatted);
                     EMOJI_MAP_LOWER.put(
                         emoji.getName()
-                            .toLowerCase(),
+                            .toLowerCase(Locale.ROOT),
                         formatted);
                 }
                 System.out.println(
@@ -73,11 +81,14 @@ public class EmojiRegistry {
                         + " custom emojis from "
                         + guild.getName()
                         + (attempt > 0 ? " (retry #" + attempt + ")" : ""));
-            }, error -> { handleFailure(guild, attempt, error); });
+            }, error -> {
+                if (guild.getJDA() != cachedJda) return;
+                handleFailure(guild, attempt, error);
+            });
     }
 
     private static synchronized void handleFailure(Guild guild, int attempt, Throwable error) {
-        if (cachedJda == null) return;
+        if (cachedJda == null || guild.getJDA() != cachedJda) return;
         int nextAttempt = attempt + 1;
         if (nextAttempt <= MAX_RETRIES) {
             System.err.println(
@@ -117,6 +128,7 @@ public class EmojiRegistry {
         }
 
         AtomicInteger pending = new AtomicInteger(guilds.size());
+        AtomicInteger succeededGuilds = new AtomicInteger(0);
         Map<String, String> combined = new ConcurrentHashMap<>();
         Map<String, String> combinedLower = new ConcurrentHashMap<>();
 
@@ -124,6 +136,7 @@ public class EmojiRegistry {
             guild.retrieveEmojis()
                 .queue(emojis -> {
                     if (emojis != null) {
+                        succeededGuilds.incrementAndGet();
                         for (RichCustomEmoji emoji : emojis) {
                             String formatted = (emoji.isAnimated() ? "<a:" : "<:") + emoji.getName()
                                 + ":"
@@ -132,15 +145,12 @@ public class EmojiRegistry {
                             combined.put(emoji.getName(), formatted);
                             combinedLower.put(
                                 emoji.getName()
-                                    .toLowerCase(),
+                                    .toLowerCase(Locale.ROOT),
                                 formatted);
                         }
                     }
                     if (pending.decrementAndGet() == 0) {
-                        EMOJI_MAP.clear();
-                        EMOJI_MAP.putAll(combined);
-                        EMOJI_MAP_LOWER.clear();
-                        EMOJI_MAP_LOWER.putAll(combinedLower);
+                        applyRefreshedMaps(combined, combinedLower);
 
                         String msg = "Successfully refreshed custom emojis (" + EMOJI_MAP.size() + " total loaded)";
                         System.out.println("[GregLink-Discord] " + msg);
@@ -152,16 +162,34 @@ public class EmojiRegistry {
                             + ": "
                             + (error != null ? error.getMessage() : "Unknown error"));
                     if (pending.decrementAndGet() == 0) {
-                        if (!combined.isEmpty()) {
-                            EMOJI_MAP.clear();
-                            EMOJI_MAP.putAll(combined);
-                            EMOJI_MAP_LOWER.clear();
-                            EMOJI_MAP_LOWER.putAll(combinedLower);
+                        if (succeededGuilds.get() > 0) {
+                            applyRefreshedMaps(combined, combinedLower);
+                            String msg = "Finished refreshing emojis (" + EMOJI_MAP.size() + " loaded)";
+                            if (callback != null) callback.accept(msg);
+                        } else {
+                            String msg = "Failed to refresh emojis from Discord: "
+                                + (error != null ? error.getMessage() : "Unknown error");
+                            if (callback != null) callback.accept(msg);
                         }
-                        String msg = "Finished refreshing emojis (" + EMOJI_MAP.size() + " loaded)";
-                        if (callback != null) callback.accept(msg);
                     }
                 });
+        }
+    }
+
+    private static synchronized void applyRefreshedMaps(Map<String, String> combined,
+        Map<String, String> combinedLower) {
+        EMOJI_MAP.putAll(combined);
+        Set<String> toRemove = new HashSet<>(EMOJI_MAP.keySet());
+        toRemove.removeAll(combined.keySet());
+        for (String key : toRemove) {
+            EMOJI_MAP.remove(key);
+        }
+
+        EMOJI_MAP_LOWER.putAll(combinedLower);
+        Set<String> toRemoveLower = new HashSet<>(EMOJI_MAP_LOWER.keySet());
+        toRemoveLower.removeAll(combinedLower.keySet());
+        for (String key : toRemoveLower) {
+            EMOJI_MAP_LOWER.remove(key);
         }
     }
 
@@ -180,7 +208,7 @@ public class EmojiRegistry {
             String name = matcher.group(1);
             String replacement = EMOJI_MAP.get(name);
             if (replacement == null) {
-                replacement = EMOJI_MAP_LOWER.get(name.toLowerCase());
+                replacement = EMOJI_MAP_LOWER.get(name.toLowerCase(Locale.ROOT));
             }
             if (replacement != null) {
                 if (sb == null) {

@@ -17,8 +17,8 @@ public class BetterQuestingHelper {
     private static final Pattern SHARE_PATTERN = Pattern
         .compile("betterquesting\\.msg\\.sharequest:([A-Za-z0-9_=-]++)");
     private static final Pattern FORMATTING_PATTERN = Pattern.compile("(?i)\\u00a7[0-9a-fk-or]");
-    private static Boolean bqAvailable = null;
-    private static boolean reflectionInitialized = false;
+    private static volatile Boolean bqAvailable = null;
+    private static volatile boolean reflectionInitialized = false;
     private static Object qdbInstance;
     private static Method qdbGetMethod;
     private static Method translateQuestNameMethod;
@@ -32,8 +32,11 @@ public class BetterQuestingHelper {
 
         try {
             Matcher matcher = SHARE_PATTERN.matcher(message);
-            StringBuffer sb = new StringBuffer();
+            StringBuffer sb = null;
             while (matcher.find()) {
+                if (sb == null) {
+                    sb = new StringBuffer(message.length() + 16);
+                }
                 String rawId = matcher.group(1);
                 UUID questId = decodeUuid(rawId);
                 String questName = null;
@@ -52,6 +55,9 @@ public class BetterQuestingHelper {
                 }
 
                 matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+            }
+            if (sb == null) {
+                return message;
             }
             matcher.appendTail(sb);
             return sb.toString();
@@ -76,12 +82,15 @@ public class BetterQuestingHelper {
 
     private static synchronized void initReflection() {
         if (reflectionInitialized) return;
-        reflectionInitialized = true;
         try {
             Class<?> qdbClass = Class.forName("betterquesting.questing.QuestDatabase");
             Field instanceField = qdbClass.getField("INSTANCE");
             qdbInstance = instanceField.get(null);
-            qdbGetMethod = qdbClass.getMethod("get", Object.class);
+            try {
+                qdbGetMethod = qdbClass.getMethod("get", UUID.class);
+            } catch (NoSuchMethodException e) {
+                qdbGetMethod = qdbClass.getMethod("get", Object.class);
+            }
 
             Class<?> iquestClass = Class.forName("betterquesting.api.questing.IQuest");
             try {
@@ -96,7 +105,9 @@ public class BetterQuestingHelper {
                 Class<?> propTypeClass = Class.forName("betterquesting.api.properties.IPropertyType");
                 iquestGetPropertyMethod = iquestClass.getMethod("getProperty", propTypeClass);
             } catch (Throwable ignored) {}
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {} finally {
+            reflectionInitialized = true;
+        }
     }
 
     public static String getQuestName(UUID questId) {

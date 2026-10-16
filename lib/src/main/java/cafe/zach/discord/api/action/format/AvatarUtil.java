@@ -4,8 +4,12 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 
@@ -19,18 +23,39 @@ public class AvatarUtil {
     private static final int CANVAS_SIZE = 64;
     private static final int MAX_CACHE_SIZE = 256;
     private static final long FAILURE_COOLDOWN_MS = 5 * 60 * 1000L;
+    private static final Pattern VALID_IDENTIFIER = Pattern.compile("^[A-Za-z0-9_-]{1,36}+$");
 
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.SECONDS)
         .readTimeout(3, TimeUnit.SECONDS)
         .callTimeout(5, TimeUnit.SECONDS)
         .build();
-    private static final ConcurrentHashMap<String, byte[]> CACHE = new ConcurrentHashMap<>();
+
+    private static final Map<String, byte[]> CACHE = Collections
+        .synchronizedMap(new LinkedHashMap<String, byte[]>(64, 0.75f, true) {
+
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, byte[]> eldest) {
+                return size() > MAX_CACHE_SIZE;
+            }
+        });
     private static final ConcurrentHashMap<String, Long> FAILED_CACHE = new ConcurrentHashMap<>();
 
     private AvatarUtil() {}
 
+    private static boolean isValidIdentifier(String identifier) {
+        if (identifier == null || identifier.isEmpty()) return false;
+        if ("Server".equalsIgnoreCase(identifier) || "Rcon".equalsIgnoreCase(identifier)) return false;
+        return VALID_IDENTIFIER.matcher(identifier)
+            .matches();
+    }
+
+    public static byte[] getCachedAvatar(String identifier) {
+        if (!isValidIdentifier(identifier)) return null;
+        return CACHE.get(identifier);
+    }
+
     public static byte[] fetchPaddedAvatar(String identifier) {
-        if (identifier == null || identifier.isEmpty()) return null;
+        if (!isValidIdentifier(identifier)) return null;
 
         byte[] cached = CACHE.get(identifier);
         if (cached != null) return cached;
@@ -42,9 +67,6 @@ public class AvatarUtil {
 
         byte[] result = fetch(identifier);
         if (result != null) {
-            if (CACHE.size() >= MAX_CACHE_SIZE) {
-                CACHE.clear();
-            }
             CACHE.put(identifier, result);
             FAILED_CACHE.remove(identifier);
         } else {
