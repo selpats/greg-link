@@ -2,6 +2,7 @@ package cafe.zach.discord.listeners;
 
 import java.util.List;
 
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.sticker.StickerItem;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -52,6 +53,20 @@ public class OnMessageReceived extends ListenerAdapter {
                 } else {
                     content = content + " " + stickerText.toString();
                 }
+            }
+        }
+
+        List<Message.Attachment> attachments = event.getMessage()
+            .getAttachments();
+        if (attachments != null && !attachments.isEmpty()) {
+            String attachmentTag = attachments.size() > 1 ? "[attachments]" : "[attachment]";
+            if (
+                content == null || content.trim()
+                    .isEmpty()
+            ) {
+                content = attachmentTag;
+            } else {
+                content = content + " " + attachmentTag;
             }
         }
 
