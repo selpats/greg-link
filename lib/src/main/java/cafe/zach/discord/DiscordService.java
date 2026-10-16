@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.FileUpload;
 
+import cafe.zach.discord.api.action.format.AvatarUtil;
 import cafe.zach.discord.api.action.format.EmojiRegistry;
 import cafe.zach.discord.api.config.ConfigHandler;
 import cafe.zach.discord.api.exceptions.InvalidDiscordConfigurationException;
@@ -73,6 +74,7 @@ class DiscordService {
         running.set(false);
 
         EmojiRegistry.shutdown();
+        AvatarUtil.clearCache();
 
         if (api != null) {
             api.shutdown();
@@ -85,6 +87,9 @@ class DiscordService {
     public synchronized void awaitDestroy() {
         running.set(false);
 
+        EmojiRegistry.shutdown();
+        AvatarUtil.clearCache();
+
         if (api != null) {
             api.shutdown();
             try {
@@ -96,6 +101,7 @@ class DiscordService {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            api = null;
         }
 
         destroyPool();
@@ -144,6 +150,19 @@ class DiscordService {
             channel.sendMessageEmbeds(embed)
                 .queue(null, error -> {});
         }
+    }
+
+    public void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier) {
+        if (!running.get() || api == null) return;
+        ExecutorService pool = eventPool;
+        if (pool == null || pool.isShutdown()) {
+            sendEmbedWithAvatar(channelId, embed, AvatarUtil.fetchPaddedAvatar(avatarIdentifier));
+            return;
+        }
+        pool.execute(() -> {
+            byte[] avatar = AvatarUtil.fetchPaddedAvatar(avatarIdentifier);
+            sendEmbedWithAvatar(channelId, embed, avatar);
+        });
     }
 
     public boolean isRunning() {

@@ -17,10 +17,10 @@ public class RelayAchievementToDiscord {
 
             for (ChannelMapping mapping : mappings) {
                 if (mapping.discord.eventsUseEmbeds) {
-                    DiscordBridge.sendEmbedWithAvatar(
+                    DiscordBridge.sendEmbedWithAvatarAsync(
                         mapping.discordChannelId,
                         MessageFormatter.embedAchievement(context),
-                        MessageFormatter.fetchAvatar(context));
+                        context.username);
                 } else {
                     DiscordBridge.sendMessage(mapping.discordChannelId, MessageFormatter.formatAchievement(context));
                 }

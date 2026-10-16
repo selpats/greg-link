@@ -130,13 +130,15 @@ public class MessageFormatter {
 
     // Discord -> Minecraft
 
-    private static final Pattern EMOJI_LINK_PATTERN = Pattern.compile("\\[[^\\]]*\\]\\((https?://[^)\\s]+)\\)");
-    private static final Pattern EMOJI_NAME_PARAM_PATTERN = Pattern.compile("[?&]name=([^&\\s)]+)");
+    private static final Pattern EMOJI_LINK_PATTERN = Pattern.compile("\\[[^\\[\\]]*+\\]\\((https?://[^)\\s]++)\\)");
+    private static final Pattern EMOJI_NAME_PARAM_PATTERN = Pattern.compile("[?&]name=([^&\\s)]++)");
 
     public static String replaceEmojiLinks(String content) {
         if (content == null || content.isEmpty()) return content;
+        if (content.indexOf('[') == -1 || content.indexOf("](") == -1 || !content.contains("name=")) return content;
+
         Matcher matcher = EMOJI_LINK_PATTERN.matcher(content);
-        StringBuffer sb = new StringBuffer();
+        StringBuffer sb = null;
         while (matcher.find()) {
             String url = matcher.group(1);
             if (url.contains("emojis") || url.contains("stickers")) {
@@ -149,13 +151,17 @@ public class MessageFormatter {
                             !decoded.trim()
                                 .isEmpty()
                         ) {
+                            if (sb == null) {
+                                sb = new StringBuffer(content.length());
+                            }
                             matcher.appendReplacement(sb, Matcher.quoteReplacement(":" + decoded + ":"));
-                            continue;
                         }
                     } catch (Exception ignored) {}
                 }
             }
-            matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
+        }
+        if (sb == null) {
+            return content;
         }
         matcher.appendTail(sb);
         return sb.toString();

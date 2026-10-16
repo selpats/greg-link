@@ -1,6 +1,7 @@
 package cafe.zach.greglink.bridge.events.server;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 
 import cafe.zach.discord.api.action.context.MinecraftContext;
@@ -12,6 +13,7 @@ public class LivingDeathHandler {
     @SubscribeEvent
     public void onLivingDeath(LivingDeathEvent event) {
         if (!(event.entityLiving instanceof EntityPlayer player)) return;
+        if (player instanceof FakePlayer) return;
 
         String username = player.getDisplayName();
         String uuid = player.getUniqueID()

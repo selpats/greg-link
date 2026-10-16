@@ -12,7 +12,7 @@ import cafe.zach.discord.api.action.format.EmojiRegistry;
 
 public class ReloadEmojisCommand extends CommandBase {
 
-    private long lastReloadTime = 0;
+    private volatile long lastReloadTime = 0;
 
     @Override
     public String getCommandName() {

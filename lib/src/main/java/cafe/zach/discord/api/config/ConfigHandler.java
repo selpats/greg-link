@@ -56,10 +56,8 @@ public abstract class ConfigHandler {
             return;
         }
 
-        try {
-            Reader reader = new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8);
+        try (Reader reader = new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8)) {
             JsonElement element = PARSER.parse(new JsonReader(reader));
-            reader.close();
 
             if (!element.isJsonObject()) return;
             JsonObject root = element.getAsJsonObject();
@@ -103,13 +101,22 @@ public abstract class ConfigHandler {
 
             onSave(root);
 
-            Writer writer = new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8);
-            writer.write(GSON.toJson(root));
-            writer.close();
+            try (Writer writer = new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)) {
+                writer.write(GSON.toJson(root));
+            }
 
         } catch (Exception e) {
             // let subclass handle if needed
         }
+    }
+
+    public boolean hasRelayCommands() {
+        for (ChannelMapping mapping : channels) {
+            if (mapping.acceptsFromMinecraft() && mapping.filters.relayCommands) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public List<ChannelMapping> getListenChannels() {

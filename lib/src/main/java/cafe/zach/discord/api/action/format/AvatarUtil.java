@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 
@@ -16,26 +17,54 @@ public class AvatarUtil {
 
     private static final float HEAD_SCALE = 0.75f;
     private static final int CANVAS_SIZE = 64;
-    private static final OkHttpClient CLIENT = new OkHttpClient();
+    private static final int MAX_CACHE_SIZE = 256;
+    private static final long FAILURE_COOLDOWN_MS = 5 * 60 * 1000L;
+
+    private static final OkHttpClient CLIENT = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.SECONDS)
+        .readTimeout(3, TimeUnit.SECONDS)
+        .callTimeout(5, TimeUnit.SECONDS)
+        .build();
     private static final ConcurrentHashMap<String, byte[]> CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Long> FAILED_CACHE = new ConcurrentHashMap<>();
 
     private AvatarUtil() {}
 
     public static byte[] fetchPaddedAvatar(String identifier) {
+        if (identifier == null || identifier.isEmpty()) return null;
+
         byte[] cached = CACHE.get(identifier);
         if (cached != null) return cached;
 
+        Long failedAt = FAILED_CACHE.get(identifier);
+        if (failedAt != null && (System.currentTimeMillis() - failedAt) < FAILURE_COOLDOWN_MS) {
+            return null;
+        }
+
         byte[] result = fetch(identifier);
-        if (result != null) CACHE.put(identifier, result);
+        if (result != null) {
+            if (CACHE.size() >= MAX_CACHE_SIZE) {
+                CACHE.clear();
+            }
+            CACHE.put(identifier, result);
+            FAILED_CACHE.remove(identifier);
+        } else {
+            if (FAILED_CACHE.size() >= MAX_CACHE_SIZE) {
+                FAILED_CACHE.clear();
+            }
+            FAILED_CACHE.put(identifier, System.currentTimeMillis());
+        }
         return result;
     }
 
     public static void invalidate(String identifier) {
+        if (identifier == null) return;
         CACHE.remove(identifier);
+        FAILED_CACHE.remove(identifier);
     }
 
     public static void clearCache() {
         CACHE.clear();
+        FAILED_CACHE.clear();
     }
 
     private static byte[] fetch(String identifier) {

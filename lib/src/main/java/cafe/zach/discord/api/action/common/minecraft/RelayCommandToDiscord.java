@@ -22,10 +22,10 @@ public class RelayCommandToDiscord {
                 }
 
                 if (mapping.discord.chatsUseEmbeds) {
-                    DiscordBridge.sendEmbedWithAvatar(
+                    DiscordBridge.sendEmbedWithAvatarAsync(
                         mapping.discordChannelId,
                         MessageFormatter.embedChatCommand(context),
-                        MessageFormatter.fetchAvatar(context));
+                        context.username);
                 } else {
                     DiscordBridge.sendMessage(mapping.discordChannelId, MessageFormatter.formatChatCommand(context));
                 }

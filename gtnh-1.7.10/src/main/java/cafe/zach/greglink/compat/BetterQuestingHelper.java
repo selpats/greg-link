@@ -14,8 +14,16 @@ import cpw.mods.fml.common.Loader;
 
 public class BetterQuestingHelper {
 
-    private static final Pattern SHARE_PATTERN = Pattern.compile("betterquesting\\.msg\\.sharequest:([A-Za-z0-9_=-]+)");
+    private static final Pattern SHARE_PATTERN = Pattern
+        .compile("betterquesting\\.msg\\.sharequest:([A-Za-z0-9_=-]++)");
+    private static final Pattern FORMATTING_PATTERN = Pattern.compile("(?i)\\u00a7[0-9a-fk-or]");
     private static Boolean bqAvailable = null;
+    private static boolean reflectionInitialized = false;
+    private static Object qdbInstance;
+    private static Method qdbGetMethod;
+    private static Method translateQuestNameMethod;
+    private static Object nativePropsName;
+    private static Method iquestGetPropertyMethod;
 
     public static String formatQuestShare(String message) {
         if (message == null || !message.contains("betterquesting.msg.sharequest:")) {
@@ -58,22 +66,37 @@ public class BetterQuestingHelper {
         try {
             byte[] bytes = Base64.getUrlDecoder()
                 .decode(string);
-            if (bytes.length >= 16) {
-                ByteBuffer bb = ByteBuffer.wrap(bytes);
-                return new UUID(bb.getLong(), bb.getLong());
-            }
-        } catch (Throwable ignored) {}
+            if (bytes.length != 16) return null;
+            ByteBuffer bb = ByteBuffer.wrap(bytes);
+            return new UUID(bb.getLong(), bb.getLong());
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
 
+    private static synchronized void initReflection() {
+        if (reflectionInitialized) return;
+        reflectionInitialized = true;
         try {
-            byte[] bytes = Base64.getDecoder()
-                .decode(string);
-            if (bytes.length >= 16) {
-                ByteBuffer bb = ByteBuffer.wrap(bytes);
-                return new UUID(bb.getLong(), bb.getLong());
-            }
-        } catch (Throwable ignored) {}
+            Class<?> qdbClass = Class.forName("betterquesting.questing.QuestDatabase");
+            Field instanceField = qdbClass.getField("INSTANCE");
+            qdbInstance = instanceField.get(null);
+            qdbGetMethod = qdbClass.getMethod("get", Object.class);
 
-        return null;
+            Class<?> iquestClass = Class.forName("betterquesting.api.questing.IQuest");
+            try {
+                Class<?> qtClass = Class.forName("betterquesting.api2.utils.QuestTranslation");
+                translateQuestNameMethod = qtClass.getMethod("translateQuestName", UUID.class, iquestClass);
+            } catch (Throwable ignored) {}
+
+            try {
+                Class<?> npClass = Class.forName("betterquesting.api.properties.NativeProps");
+                Field nameField = npClass.getField("NAME");
+                nativePropsName = nameField.get(null);
+                Class<?> propTypeClass = Class.forName("betterquesting.api.properties.IPropertyType");
+                iquestGetPropertyMethod = iquestClass.getMethod("getProperty", propTypeClass);
+            } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {}
     }
 
     public static String getQuestName(UUID questId) {
@@ -88,50 +111,44 @@ public class BetterQuestingHelper {
         }
         if (!bqAvailable) return null;
 
+        if (!reflectionInitialized) {
+            initReflection();
+        }
+        if (qdbInstance == null || qdbGetMethod == null) return null;
+
         try {
-            // betterquesting.questing.QuestDatabase.INSTANCE
-            Class<?> qdbClass = Class.forName("betterquesting.questing.QuestDatabase");
-            Field instanceField = qdbClass.getField("INSTANCE");
-            Object qdb = instanceField.get(null);
-            Method getMethod = qdbClass.getMethod("get", Object.class);
-            Object quest = getMethod.invoke(qdb, questId);
+            Object quest = qdbGetMethod.invoke(qdbInstance, questId);
             if (quest == null) return null;
 
-            // Try QuestTranslation.translateQuestName(UUID, IQuest)
-            try {
-                Class<?> qtClass = Class.forName("betterquesting.api2.utils.QuestTranslation");
-                Class<?> iquestClass = Class.forName("betterquesting.api.questing.IQuest");
-                Method translateMethod = qtClass.getMethod("translateQuestName", UUID.class, iquestClass);
-                String translated = (String) translateMethod.invoke(null, questId, quest);
-                if (translated != null && !translated.trim()
-                    .isEmpty()) {
-                    return translated;
-                }
-            } catch (Throwable ignored) {}
+            if (translateQuestNameMethod != null) {
+                try {
+                    String translated = (String) translateQuestNameMethod.invoke(null, questId, quest);
+                    if (translated != null && !translated.trim()
+                        .isEmpty()) {
+                        return translated;
+                    }
+                } catch (Throwable ignored) {}
+            }
 
-            // Fallback: quest.getProperty(NativeProps.NAME)
-            try {
-                Class<?> npClass = Class.forName("betterquesting.api.properties.NativeProps");
-                Field nameField = npClass.getField("NAME");
-                Object nameProp = nameField.get(null);
-                Class<?> propTypeClass = Class.forName("betterquesting.api.properties.IPropertyType");
-                Method getPropMethod = quest.getClass()
-                    .getMethod("getProperty", propTypeClass);
-                String rawName = (String) getPropMethod.invoke(quest, nameProp);
-                if (rawName != null && !rawName.trim()
-                    .isEmpty()) {
-                    return StatCollector.translateToLocal(rawName);
-                }
-            } catch (Throwable ignored) {}
-
+            if (iquestGetPropertyMethod != null && nativePropsName != null) {
+                try {
+                    String rawName = (String) iquestGetPropertyMethod.invoke(quest, nativePropsName);
+                    if (rawName != null && !rawName.trim()
+                        .isEmpty()) {
+                        return StatCollector.translateToLocal(rawName);
+                    }
+                } catch (Throwable ignored) {}
+            }
         } catch (Throwable ignored) {}
 
         return null;
     }
 
     public static String cleanFormatting(String text) {
-        if (text == null) return "";
-        return text.replaceAll("(?i)\\u00a7[0-9a-fk-or]", "")
+        if (text == null || text.isEmpty()) return "";
+        if (text.indexOf('\u00a7') == -1) return text.trim();
+        return FORMATTING_PATTERN.matcher(text)
+            .replaceAll("")
             .trim();
     }
 }

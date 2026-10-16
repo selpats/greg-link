@@ -49,6 +49,11 @@ public class DiscordBridge {
         service.sendEmbedWithAvatar(channelId, embed, avatar);
     }
 
+    public static void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier) {
+        if (service == null || !service.isRunning()) return;
+        service.sendEmbedWithAvatarAsync(channelId, embed, avatarIdentifier);
+    }
+
     public static boolean isConnected() {
         return service != null && service.isRunning();
     }

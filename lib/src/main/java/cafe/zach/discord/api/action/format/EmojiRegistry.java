@@ -20,25 +20,17 @@ public class EmojiRegistry {
 
     private static final Map<String, String> EMOJI_MAP = new ConcurrentHashMap<>();
     private static final Map<String, String> EMOJI_MAP_LOWER = new ConcurrentHashMap<>();
-    private static final Pattern MINECRAFT_EMOJI_PATTERN = Pattern.compile("(?<!<a?):([A-Za-z0-9_]+):(?!\\d+>)");
+    private static final Pattern MINECRAFT_EMOJI_PATTERN = Pattern.compile("(?<!<a?):([A-Za-z0-9_]{1,32}+):(?!\\d+>)");
 
     private static final int MAX_RETRIES = 3;
     private static final long RETRY_INTERVAL_MINUTES = 15;
 
     private static ScheduledExecutorService scheduler;
-    private static JDA cachedJda;
+    private static volatile JDA cachedJda;
 
     public static synchronized void loadEmojis(JDA jda) {
         if (jda == null) return;
         cachedJda = jda;
-
-        if (scheduler == null || scheduler.isShutdown()) {
-            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "GregLink-EmojiRetry");
-                t.setDaemon(true);
-                return t;
-            });
-        }
 
         List<Guild> guilds = jda.getGuilds();
         for (Guild guild : guilds) {
@@ -46,11 +38,22 @@ public class EmojiRegistry {
         }
     }
 
+    private static synchronized ScheduledExecutorService getOrCreateScheduler() {
+        if (scheduler == null || scheduler.isShutdown()) {
+            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "GregLink-EmojiRetry");
+                t.setDaemon(true);
+                return t;
+            });
+        }
+        return scheduler;
+    }
+
     private static void fetchGuildEmojis(Guild guild, int attempt) {
         guild.retrieveEmojis()
             .queue(emojis -> {
-                if (emojis == null || emojis.isEmpty()) {
-                    handleFailure(guild, attempt, new IllegalStateException("Guild returned empty emoji list"));
+                if (emojis == null) {
+                    handleFailure(guild, attempt, new IllegalStateException("Guild returned null emoji list"));
                     return;
                 }
 
@@ -73,7 +76,8 @@ public class EmojiRegistry {
             }, error -> { handleFailure(guild, attempt, error); });
     }
 
-    private static void handleFailure(Guild guild, int attempt, Throwable error) {
+    private static synchronized void handleFailure(Guild guild, int attempt, Throwable error) {
+        if (cachedJda == null) return;
         int nextAttempt = attempt + 1;
         if (nextAttempt <= MAX_RETRIES) {
             System.err.println(
@@ -87,10 +91,8 @@ public class EmojiRegistry {
                     + " in "
                     + RETRY_INTERVAL_MINUTES
                     + " minutes.");
-            if (scheduler != null && !scheduler.isShutdown()) {
-                scheduler
-                    .schedule(() -> fetchGuildEmojis(guild, nextAttempt), RETRY_INTERVAL_MINUTES, TimeUnit.MINUTES);
-            }
+            getOrCreateScheduler()
+                .schedule(() -> fetchGuildEmojis(guild, nextAttempt), RETRY_INTERVAL_MINUTES, TimeUnit.MINUTES);
         } else {
             System.err.println(
                 "[GregLink-Discord] Failed to load emojis from " + guild.getName()
@@ -102,12 +104,13 @@ public class EmojiRegistry {
     }
 
     public static void refreshEmojis(Consumer<String> callback) {
-        if (cachedJda == null) {
+        JDA jda = cachedJda;
+        if (jda == null) {
             if (callback != null) callback.accept("Discord bot is not connected.");
             return;
         }
 
-        List<Guild> guilds = cachedJda.getGuilds();
+        List<Guild> guilds = jda.getGuilds();
         if (guilds.isEmpty()) {
             if (callback != null) callback.accept("Discord bot is not in any servers/guilds.");
             return;
@@ -120,16 +123,18 @@ public class EmojiRegistry {
         for (Guild guild : guilds) {
             guild.retrieveEmojis()
                 .queue(emojis -> {
-                    for (RichCustomEmoji emoji : emojis) {
-                        String formatted = (emoji.isAnimated() ? "<a:" : "<:") + emoji.getName()
-                            + ":"
-                            + emoji.getId()
-                            + ">";
-                        combined.put(emoji.getName(), formatted);
-                        combinedLower.put(
-                            emoji.getName()
-                                .toLowerCase(),
-                            formatted);
+                    if (emojis != null) {
+                        for (RichCustomEmoji emoji : emojis) {
+                            String formatted = (emoji.isAnimated() ? "<a:" : "<:") + emoji.getName()
+                                + ":"
+                                + emoji.getId()
+                                + ">";
+                            combined.put(emoji.getName(), formatted);
+                            combinedLower.put(
+                                emoji.getName()
+                                    .toLowerCase(),
+                                formatted);
+                        }
                     }
                     if (pending.decrementAndGet() == 0) {
                         EMOJI_MAP.clear();
@@ -164,8 +169,13 @@ public class EmojiRegistry {
         if (text == null || text.isEmpty()) return text;
         if (EMOJI_MAP.isEmpty()) return text;
 
+        int firstColon = text.indexOf(':');
+        if (firstColon == -1 || text.indexOf(':', firstColon + 1) == -1) {
+            return text;
+        }
+
         Matcher matcher = MINECRAFT_EMOJI_PATTERN.matcher(text);
-        StringBuffer sb = new StringBuffer();
+        StringBuffer sb = null;
         while (matcher.find()) {
             String name = matcher.group(1);
             String replacement = EMOJI_MAP.get(name);
@@ -173,20 +183,27 @@ public class EmojiRegistry {
                 replacement = EMOJI_MAP_LOWER.get(name.toLowerCase());
             }
             if (replacement != null) {
+                if (sb == null) {
+                    sb = new StringBuffer(text.length() + 32);
+                }
                 matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
-            } else {
-                matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
             }
+        }
+        if (sb == null) {
+            return text;
         }
         matcher.appendTail(sb);
         return sb.toString();
     }
 
     public static synchronized void shutdown() {
+        cachedJda = null;
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = null;
         }
+        EMOJI_MAP.clear();
+        EMOJI_MAP_LOWER.clear();
     }
 
     public static Map<String, String> getEmojiMap() {

@@ -18,10 +18,10 @@ public class RelayJoinToDiscord {
 
             for (ChannelMapping mapping : mappings) {
                 if (mapping.discord.eventsUseEmbeds) {
-                    DiscordBridge.sendEmbedWithAvatar(
+                    DiscordBridge.sendEmbedWithAvatarAsync(
                         mapping.discordChannelId,
                         MessageFormatter.embedJoin(context),
-                        MessageFormatter.fetchAvatar(context));
+                        context.username);
                 } else {
                     DiscordBridge.sendMessage(mapping.discordChannelId, MessageFormatter.formatJoin(context));
                 }

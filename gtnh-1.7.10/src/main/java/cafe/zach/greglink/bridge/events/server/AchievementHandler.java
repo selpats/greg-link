@@ -1,8 +1,11 @@
 package cafe.zach.greglink.bridge.events.server;
 
+import java.lang.reflect.Field;
+
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.stats.Achievement;
 import net.minecraft.stats.StatisticsFile;
+import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.entity.player.AchievementEvent;
 
 import cafe.zach.discord.api.action.context.MinecraftContext;
@@ -11,29 +14,49 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class AchievementHandler {
 
+    private static Field statsField;
+    private static boolean statsFieldResolved = false;
+
+    private static StatisticsFile getStatsFile(EntityPlayerMP player) {
+        try {
+            return player.func_147099_x();
+        } catch (Throwable ignored) {
+            try {
+                if (!statsFieldResolved) {
+                    Field f = EntityPlayerMP.class.getDeclaredField("field_147103_bO");
+                    f.setAccessible(true);
+                    statsField = f;
+                    statsFieldResolved = true;
+                }
+                if (statsField != null) {
+                    return (StatisticsFile) statsField.get(player);
+                }
+            } catch (Throwable ignored2) {
+                statsFieldResolved = true;
+            }
+            return null;
+        }
+    }
+
     @SubscribeEvent
     public void onAchievement(AchievementEvent event) {
         if (!(event.entityPlayer instanceof EntityPlayerMP)) return;
+        if (event.entityPlayer instanceof FakePlayer) return;
 
         EntityPlayerMP player = (EntityPlayerMP) event.entityPlayer;
+        if (player.playerNetServerHandler == null) return;
+
         Achievement achievement = event.achievement;
+        if (achievement == null) return;
 
-        try {
-            // Access the private StatisticsFile field
-            java.lang.reflect.Field statsField = EntityPlayerMP.class.getDeclaredField("field_147103_bO");
-            statsField.setAccessible(true);
-            StatisticsFile stats = (StatisticsFile) statsField.get(player);
+        StatisticsFile stats = getStatsFile(player);
+        if (stats == null) return;
 
-            // Only fire if the player can actually unlock this achievement
-            if (!stats.canUnlockAchievement(achievement)) return;
+        // Fast O(1) check first: skip if already unlocked
+        if (stats.hasAchievementUnlocked(achievement)) return;
 
-            // Also skip if already unlocked
-            if (stats.hasAchievementUnlocked(achievement)) return;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
+        // Only fire if the player can actually unlock this achievement
+        if (!stats.canUnlockAchievement(achievement)) return;
 
         String username = player.getDisplayName();
         String uuid = player.getUniqueID()

@@ -17,10 +17,10 @@ public class RelayChatToDiscord {
 
             for (ChannelMapping mapping : mappings) {
                 if (mapping.discord.chatsUseEmbeds) {
-                    DiscordBridge.sendEmbedWithAvatar(
+                    DiscordBridge.sendEmbedWithAvatarAsync(
                         mapping.discordChannelId,
                         MessageFormatter.embedChat(context),
-                        MessageFormatter.fetchAvatar(context));
+                        context.username);
                 } else {
                     DiscordBridge.sendMessage(mapping.discordChannelId, MessageFormatter.formatChat(context));
                 }
