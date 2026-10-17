@@ -3,6 +3,7 @@ package cafe.zach.discord.api.action.context;
 public class DiscordContext {
 
     public final String username;
+    public final String replyTo;
     public final String content;
     public final String channelId;
     public final String guildId;
@@ -11,6 +12,7 @@ public class DiscordContext {
 
     private DiscordContext(Builder builder) {
         this.username = builder.username;
+        this.replyTo = builder.replyTo;
         this.content = builder.content;
         this.channelId = builder.channelId;
         this.guildId = builder.guildId;
@@ -25,7 +27,13 @@ public class DiscordContext {
 
     public static DiscordContext forMessage(String username, String content, String channelId, String guildId,
         boolean isBot) {
+        return forMessage(username, null, content, channelId, guildId, isBot);
+    }
+
+    public static DiscordContext forMessage(String username, String replyTo, String content, String channelId,
+        String guildId, boolean isBot) {
         return new Builder().username(username)
+            .replyTo(replyTo)
             .content(content)
             .channelId(channelId)
             .guildId(guildId)
@@ -36,6 +44,7 @@ public class DiscordContext {
     private static class Builder {
 
         private String username;
+        private String replyTo;
         private String content;
         private String channelId;
         private String guildId;
@@ -44,6 +53,11 @@ public class DiscordContext {
 
         private Builder username(String username) {
             this.username = username;
+            return this;
+        }
+
+        private Builder replyTo(String replyTo) {
+            this.replyTo = replyTo;
             return this;
         }
 

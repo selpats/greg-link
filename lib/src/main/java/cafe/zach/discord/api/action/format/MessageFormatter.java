@@ -192,7 +192,14 @@ public class MessageFormatter {
     }
 
     public static String formatDiscordMessage(DiscordContext context) {
-        return String.format("[Discord] %s: %s", context.username, replaceEmojiLinks(context.content));
+        String formattedContent = replaceEmojiLinks(context.content);
+        if (
+            context.replyTo != null && !context.replyTo.trim()
+                .isEmpty()
+        ) {
+            return String.format("[Discord] %s replied to %s: %s", context.username, context.replyTo, formattedContent);
+        }
+        return String.format("[Discord] %s: %s", context.username, formattedContent);
     }
 
     public static String formatDiscordReady(DiscordContext context) {
