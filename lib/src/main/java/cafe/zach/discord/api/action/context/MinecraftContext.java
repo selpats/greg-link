@@ -1,5 +1,7 @@
 package cafe.zach.discord.api.action.context;
 
+import cafe.zach.discord.api.action.format.MessageFormatter;
+
 public class MinecraftContext {
 
     public final String username;
@@ -10,9 +12,9 @@ public class MinecraftContext {
     public final String dimensionName;
 
     private MinecraftContext(Builder builder) {
-        this.username = builder.username;
+        this.username = MessageFormatter.stripFormatting(builder.username);
         this.uuid = builder.uuid;
-        this.content = builder.content;
+        this.content = MessageFormatter.stripFormatting(builder.content);
         this.worldName = builder.worldName;
         this.dimensionId = builder.dimensionId;
         this.dimensionName = builder.dimensionName;

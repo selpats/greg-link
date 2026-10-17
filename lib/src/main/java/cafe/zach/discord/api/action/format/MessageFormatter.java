@@ -13,53 +13,76 @@ import cafe.zach.discord.api.action.context.MinecraftContext;
 
 public class MessageFormatter {
 
+    private static final Pattern FORMATTING_PATTERN = Pattern.compile("(?i)\\u00a7[0-9a-fk-or]");
+
+    public static String stripFormatting(String text) {
+        if (text == null || text.isEmpty() || text.indexOf('\u00a7') == -1) return text;
+        return FORMATTING_PATTERN.matcher(text)
+            .replaceAll("");
+    }
+
     public static byte[] fetchAvatar(MinecraftContext context) {
-        return AvatarUtil.fetchPaddedAvatar(context.username);
+        return AvatarUtil.fetchPaddedAvatar(stripFormatting(context.username));
     }
 
     // Minecraft -> Discord
 
     public static String formatChat(MinecraftContext context) {
-        return String.format("**%s** » %s", context.username, EmojiRegistry.replaceEmojis(context.content));
+        return String.format(
+            "**%s** » %s",
+            stripFormatting(context.username),
+            EmojiRegistry.replaceEmojis(stripFormatting(context.content)));
     }
 
     public static MessageEmbed embedChat(MinecraftContext context) {
-        return new EmbedBuilder().setAuthor(context.username, null, "attachment://author.png")
-            .setDescription(EmojiRegistry.replaceEmojis(context.content))
+        return new EmbedBuilder().setAuthor(stripFormatting(context.username), null, "attachment://author.png")
+            .setDescription(EmojiRegistry.replaceEmojis(stripFormatting(context.content)))
             .setColor(EmbedColors.CHAT)
             .build();
     }
 
     public static String formatChatCommand(MinecraftContext context) {
-        return String.format("**%s** ran: %s", context.username, EmojiRegistry.replaceEmojis(context.content));
+        return String.format(
+            "**%s** ran: %s",
+            stripFormatting(context.username),
+            EmojiRegistry.replaceEmojis(stripFormatting(context.content)));
     }
 
     public static MessageEmbed embedChatCommand(MinecraftContext context) {
         return new EmbedBuilder()
-            .setAuthor(String.format("%s ran a command", context.username), null, "attachment://author.png")
-            .setDescription(EmojiRegistry.replaceEmojis(context.content))
+            .setAuthor(
+                String.format("%s ran a command", stripFormatting(context.username)),
+                null,
+                "attachment://author.png")
+            .setDescription(EmojiRegistry.replaceEmojis(stripFormatting(context.content)))
             .setColor(EmbedColors.COMMAND)
             .build();
     }
 
     public static String formatJoin(MinecraftContext context) {
-        return String.format("**%s** joined", context.username);
+        return String.format("**%s** joined", stripFormatting(context.username));
     }
 
     public static MessageEmbed embedJoin(MinecraftContext context) {
         return new EmbedBuilder()
-            .setAuthor(String.format("%s joined the server", context.username), null, "attachment://author.png")
+            .setAuthor(
+                String.format("%s joined the server", stripFormatting(context.username)),
+                null,
+                "attachment://author.png")
             .setColor(EmbedColors.JOIN)
             .build();
     }
 
     public static String formatLeave(MinecraftContext context) {
-        return String.format("**%s** left", context.username);
+        return String.format("**%s** left", stripFormatting(context.username));
     }
 
     public static MessageEmbed embedLeave(MinecraftContext context) {
         return new EmbedBuilder()
-            .setAuthor(String.format("%s left the server", context.username), null, "attachment://author.png")
+            .setAuthor(
+                String.format("%s left the server", stripFormatting(context.username)),
+                null,
+                "attachment://author.png")
             .setColor(EmbedColors.LEAVE)
             .build();
     }
@@ -105,23 +128,24 @@ public class MessageFormatter {
     }
 
     public static String formatPlayerDeath(MinecraftContext context) {
-        return String.format("☠️ %s", context.content);
+        return String.format("☠️ %s", stripFormatting(context.content));
     }
 
     public static MessageEmbed embedPlayerDeath(MinecraftContext context) {
-        return new EmbedBuilder().setAuthor(context.content, null, "attachment://author.png")
+        return new EmbedBuilder().setAuthor(stripFormatting(context.content), null, "attachment://author.png")
             .setColor(EmbedColors.RED)
             .build();
     }
 
     public static String formatAchievement(MinecraftContext context) {
-        return String.format("**%s** achieved **%s**", context.username, context.content);
+        return String
+            .format("**%s** achieved **%s**", stripFormatting(context.username), stripFormatting(context.content));
     }
 
     public static MessageEmbed embedAchievement(MinecraftContext context) {
         return new EmbedBuilder()
             .setAuthor(
-                String.format("%s achieved %s", context.username, context.content),
+                String.format("%s achieved %s", stripFormatting(context.username), stripFormatting(context.content)),
                 null,
                 "attachment://author.png")
             .setColor(EmbedColors.GOLD)
