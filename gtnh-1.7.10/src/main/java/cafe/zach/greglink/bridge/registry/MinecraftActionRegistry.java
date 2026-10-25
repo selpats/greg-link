@@ -16,5 +16,6 @@ public class MinecraftActionRegistry {
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_SERVER_STOPPED, RelayServerStoppedToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_ACHIEVEMENT, RelayAchievementToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_DEATH, RelayDeathToDiscord.create());
+        ActionRegistry.register(ActionRegistry.ON_MINECRAFT_AFK, RelayAfkToDiscord.create());
     }
 }

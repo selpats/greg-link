@@ -119,6 +119,15 @@ public abstract class ConfigHandler {
         return false;
     }
 
+    public boolean hasRelayAfk() {
+        for (ChannelMapping mapping : channels) {
+            if (mapping.acceptsFromMinecraft() && mapping.filters.relayAfk) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public List<ChannelMapping> getListenChannels() {
         return channels.stream()
             .filter(ChannelMapping::acceptsFromDiscord)

@@ -87,6 +87,21 @@ public class MessageFormatter {
             .build();
     }
 
+    public static String formatAfk(MinecraftContext context) {
+        String name = stripFormatting(context.username);
+        return context.isAfk ? String.format("**%s** is now AFK", name)
+            : String.format("**%s** is no longer AFK", name);
+    }
+
+    public static MessageEmbed embedAfk(MinecraftContext context) {
+        String name = stripFormatting(context.username);
+        String status = context.isAfk ? String.format("%s is now AFK", name)
+            : String.format("%s is no longer AFK", name);
+        return new EmbedBuilder().setAuthor(status, null, "attachment://author.png")
+            .setColor(EmbedColors.GREY)
+            .build();
+    }
+
     public static String formatServerStarting(MinecraftContext context) {
         return "\uD83D\uDD04  Server starting...";
     }

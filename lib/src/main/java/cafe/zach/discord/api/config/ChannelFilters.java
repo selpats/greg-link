@@ -6,14 +6,20 @@ public class ChannelFilters {
 
     public final boolean ignoreBots;
     public final boolean relayCommands;
+    public final boolean relayAfk;
 
     public ChannelFilters(boolean ignoreBots) {
-        this(ignoreBots, false);
+        this(ignoreBots, false, true);
     }
 
     public ChannelFilters(boolean ignoreBots, boolean relayCommands) {
+        this(ignoreBots, relayCommands, true);
+    }
+
+    public ChannelFilters(boolean ignoreBots, boolean relayCommands, boolean relayAfk) {
         this.ignoreBots = ignoreBots;
         this.relayCommands = relayCommands;
+        this.relayAfk = relayAfk;
     }
 
     public static ChannelFilters fromJson(JsonObject json) {
@@ -27,13 +33,22 @@ public class ChannelFilters {
         ) {
             relayCommands = false;
         }
-        return new ChannelFilters(ignoreBots, relayCommands);
+        boolean relayAfk = !json.has("relayAfk") || json.get("relayAfk")
+            .getAsBoolean();
+        if (
+            json.has("ignoreAfk") && json.get("ignoreAfk")
+                .getAsBoolean()
+        ) {
+            relayAfk = false;
+        }
+        return new ChannelFilters(ignoreBots, relayCommands, relayAfk);
     }
 
     public JsonObject toJson() {
         JsonObject json = new JsonObject();
         json.addProperty("ignoreBots", ignoreBots);
         json.addProperty("relayCommands", relayCommands);
+        json.addProperty("relayAfk", relayAfk);
         return json;
     }
 }

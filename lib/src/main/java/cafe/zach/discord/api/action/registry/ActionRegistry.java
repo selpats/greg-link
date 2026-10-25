@@ -25,6 +25,7 @@ public class ActionRegistry {
     public static final String ON_MINECRAFT_SERVER_STOPPED = "on_minecraft_server_stopped";
     public static final String ON_MINECRAFT_ACHIEVEMENT = "on_minecraft_achievement";
     public static final String ON_MINECRAFT_DEATH = "on_minecraft_death";
+    public static final String ON_MINECRAFT_AFK = "on_minecraft_afk";
 
     private static final Map<String, List<IDiscordAction>> discordActions = new LinkedHashMap<>();
     private static final Map<String, List<IMinecraftAction>> minecraftActions = new LinkedHashMap<>();

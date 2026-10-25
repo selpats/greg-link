@@ -37,17 +37,29 @@ public class ChannelMapping {
         ChannelFilters filters = json.has("filters") ? ChannelFilters.fromJson(json.getAsJsonObject("filters"))
             : new ChannelFilters(true);
 
+        boolean relayCommands = filters.relayCommands;
         if (json.has("relayCommands")) {
-            filters = new ChannelFilters(
-                filters.ignoreBots,
-                json.get("relayCommands")
-                    .getAsBoolean());
+            relayCommands = json.get("relayCommands")
+                .getAsBoolean();
         } else if (
             json.has("ignoreCommands") && json.get("ignoreCommands")
                 .getAsBoolean()
         ) {
-            filters = new ChannelFilters(filters.ignoreBots, false);
+            relayCommands = false;
         }
+
+        boolean relayAfk = filters.relayAfk;
+        if (json.has("relayAfk")) {
+            relayAfk = json.get("relayAfk")
+                .getAsBoolean();
+        } else if (
+            json.has("ignoreAfk") && json.get("ignoreAfk")
+                .getAsBoolean()
+        ) {
+            relayAfk = false;
+        }
+
+        filters = new ChannelFilters(filters.ignoreBots, relayCommands, relayAfk);
 
         return new ChannelMapping(
             json.has("id") ? json.get("id")

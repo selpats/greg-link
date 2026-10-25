@@ -29,6 +29,9 @@ public class BridgeManager {
         FMLCommonHandler.instance()
             .bus()
             .register(new PlayerLoggedOutHandler());
+
+        // ServerUtilities AFK logger listener
+        AfkHandler.register();
     }
 
     public static void registerActions() {
@@ -38,6 +41,7 @@ public class BridgeManager {
     }
 
     public static void connect() {
+        AfkHandler.register();
         try {
             DiscordBridge.createConnection();
         } catch (InvalidDiscordConfigurationException | InterruptedException e) {
@@ -46,6 +50,7 @@ public class BridgeManager {
     }
 
     public static void disconnect() {
+        AfkHandler.unregister();
         DiscordBridge.shutdown();
     }
 }

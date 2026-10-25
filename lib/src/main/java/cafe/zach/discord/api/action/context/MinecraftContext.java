@@ -10,6 +10,7 @@ public class MinecraftContext {
     public final String worldName;
     public final String dimensionId;
     public final String dimensionName;
+    public final boolean isAfk;
 
     private MinecraftContext(Builder builder) {
         this.username = MessageFormatter.stripFormatting(builder.username);
@@ -18,6 +19,7 @@ public class MinecraftContext {
         this.worldName = builder.worldName;
         this.dimensionId = builder.dimensionId;
         this.dimensionName = builder.dimensionName;
+        this.isAfk = builder.isAfk;
     }
 
     public static MinecraftContext forChat(String username, String uuid, String content, String worldName,
@@ -69,6 +71,13 @@ public class MinecraftContext {
             .build();
     }
 
+    public static MinecraftContext forAfk(String username, String uuid, boolean isAfk) {
+        return new Builder().username(username)
+            .uuid(uuid)
+            .isAfk(isAfk)
+            .build();
+    }
+
     public static MinecraftContext forEmpty() {
         return new Builder().build();
     }
@@ -81,6 +90,7 @@ public class MinecraftContext {
         private String worldName;
         private String dimensionId;
         private String dimensionName;
+        private boolean isAfk;
 
         private Builder username(String username) {
             this.username = username;
@@ -109,6 +119,11 @@ public class MinecraftContext {
 
         private Builder dimensionName(String dimensionName) {
             this.dimensionName = dimensionName;
+            return this;
+        }
+
+        private Builder isAfk(boolean isAfk) {
+            this.isAfk = isAfk;
             return this;
         }
 
