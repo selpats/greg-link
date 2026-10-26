@@ -1,6 +1,10 @@
 package cafe.zach.greglink.bridge.events.server;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
@@ -25,6 +29,8 @@ public class AfkHandler {
     private static final String NO_LONGER_AFK_SUFFIX = " is no longer AFK";
     private static final String APPENDER_NAME = "GregLink-AfkAppender";
 
+    private static final Set<String> AFK_PLAYERS = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+
     private static AbstractAppender appender;
 
     public static synchronized void register() {
@@ -41,7 +47,11 @@ public class AfkHandler {
                 if (event == null || event.getLevel() != Level.INFO || event.getMessage() == null) return;
 
                 ConfigHandler config = ConfigHandler.getInstance();
-                if (config == null || !config.hasRelayAfk()) return;
+                if (config == null) return;
+
+                boolean relayAfk = config.hasRelayAfk();
+                boolean trackForAe2 = config.filterAe2CraftingNotifications;
+                if (!relayAfk && !trackForAe2) return;
 
                 String msg = event.getMessage()
                     .getFormattedMessage();
@@ -59,7 +69,7 @@ public class AfkHandler {
                     return;
                 }
 
-                handleAfkLog(rawPlayerName, isAfk);
+                handleAfkLog(rawPlayerName, isAfk, relayAfk);
             }
         };
         appender.start();
@@ -67,6 +77,7 @@ public class AfkHandler {
     }
 
     public static synchronized void unregister() {
+        AFK_PLAYERS.clear();
         if (appender == null) return;
         try {
             Logger logger = LogManager.getLogger(SU_LOGGER_NAME);
@@ -79,7 +90,46 @@ public class AfkHandler {
         }
     }
 
-    private static void handleAfkLog(String rawDisplayName, boolean isAfk) {
+    public static void clearPlayer(String username) {
+        if (username == null) return;
+        AFK_PLAYERS.remove(username.toLowerCase(Locale.ROOT));
+    }
+
+    public static boolean isPlayerOfflineOrAfk(String playerName) {
+        if (playerName == null) return true;
+        String cleanName = MessageFormatter.stripFormatting(playerName)
+            .trim();
+        if (cleanName.isEmpty()) return true;
+
+        MinecraftServer server = MinecraftServer.getServer();
+        if (server == null) return true;
+        ServerConfigurationManager configManager = server.getConfigurationManager();
+        if (configManager == null || configManager.playerEntityList == null) return true;
+
+        EntityPlayerMP onlinePlayer = null;
+        List<?> players = configManager.playerEntityList;
+        for (Object obj : players) {
+            if (!(obj instanceof EntityPlayerMP)) continue;
+            EntityPlayerMP player = (EntityPlayerMP) obj;
+            if (player instanceof FakePlayer) continue;
+
+            String senderName = player.getCommandSenderName();
+            if (cleanName.equalsIgnoreCase(senderName)) {
+                onlinePlayer = player;
+                break;
+            }
+        }
+
+        if (onlinePlayer == null) {
+            return true;
+        }
+
+        return AFK_PLAYERS.contains(
+            onlinePlayer.getCommandSenderName()
+                .toLowerCase(Locale.ROOT));
+    }
+
+    private static void handleAfkLog(String rawDisplayName, boolean isAfk, boolean relayToDiscord) {
         String cleanTarget = MessageFormatter.stripFormatting(rawDisplayName)
             .trim();
         if (cleanTarget.isEmpty()) return;
@@ -111,6 +161,16 @@ public class AfkHandler {
             }
         }
 
-        ActionRegistry.fireMinecraft(ActionRegistry.ON_MINECRAFT_AFK, MinecraftContext.forAfk(username, uuid, isAfk));
+        String key = username.toLowerCase(Locale.ROOT);
+        if (isAfk) {
+            AFK_PLAYERS.add(key);
+        } else {
+            AFK_PLAYERS.remove(key);
+        }
+
+        if (relayToDiscord) {
+            ActionRegistry
+                .fireMinecraft(ActionRegistry.ON_MINECRAFT_AFK, MinecraftContext.forAfk(username, uuid, isAfk));
+        }
     }
 }

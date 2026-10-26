@@ -21,6 +21,10 @@ public abstract class ConfigHandler {
     // discord
     public String discordToken = "";
 
+    // ae2 web integration
+    public boolean filterAe2CraftingNotifications = false;
+    public int ae2AlwaysNotifyAfterMinutes = 60;
+
     // server
     // not yet used
 
@@ -74,6 +78,21 @@ public abstract class ConfigHandler {
                     channels.add(ChannelMapping.fromJson(el.getAsJsonObject()));
             }
 
+            if (
+                root.has("ae2WebIntegration") && root.get("ae2WebIntegration")
+                    .isJsonObject()
+            ) {
+                JsonObject ae2 = root.getAsJsonObject("ae2WebIntegration");
+                if (ae2.has("filterCraftingNotifications")) {
+                    filterAe2CraftingNotifications = ae2.get("filterCraftingNotifications")
+                        .getAsBoolean();
+                }
+                if (ae2.has("alwaysNotifyAfterMinutes")) {
+                    ae2AlwaysNotifyAfterMinutes = ae2.get("alwaysNotifyAfterMinutes")
+                        .getAsInt();
+                }
+            }
+
             onLoad(root);
 
         } catch (Exception e) {
@@ -98,6 +117,11 @@ public abstract class ConfigHandler {
             JsonArray channelArray = new JsonArray();
             for (ChannelMapping mapping : channels) channelArray.add(mapping.toJson());
             root.add("channels", channelArray);
+
+            JsonObject ae2 = new JsonObject();
+            ae2.addProperty("filterCraftingNotifications", filterAe2CraftingNotifications);
+            ae2.addProperty("alwaysNotifyAfterMinutes", ae2AlwaysNotifyAfterMinutes);
+            root.add("ae2WebIntegration", ae2);
 
             onSave(root);
 

@@ -42,6 +42,7 @@ public class BridgeManager {
 
     public static void connect() {
         AfkHandler.register();
+        Ae2WebIntegrationHandler.register();
         try {
             DiscordBridge.createConnection();
         } catch (InvalidDiscordConfigurationException | InterruptedException e) {

@@ -26,6 +26,7 @@ public class ActionRegistry {
     public static final String ON_MINECRAFT_ACHIEVEMENT = "on_minecraft_achievement";
     public static final String ON_MINECRAFT_DEATH = "on_minecraft_death";
     public static final String ON_MINECRAFT_AFK = "on_minecraft_afk";
+    public static final String ON_MINECRAFT_AE2_CRAFT = "on_minecraft_ae2_craft";
 
     private static final Map<String, List<IDiscordAction>> discordActions = new LinkedHashMap<>();
     private static final Map<String, List<IMinecraftAction>> minecraftActions = new LinkedHashMap<>();

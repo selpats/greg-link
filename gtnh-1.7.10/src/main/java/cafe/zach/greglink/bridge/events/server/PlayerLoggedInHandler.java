@@ -13,6 +13,8 @@ public class PlayerLoggedInHandler {
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.player == null || event.player instanceof FakePlayer) return;
 
+        AfkHandler.clearPlayer(event.player.getCommandSenderName());
+
         ActionRegistry.fireMinecraft(
             ActionRegistry.ON_MINECRAFT_PLAYER_JOIN,
             MinecraftContext.forPlayerJoin(

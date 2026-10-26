@@ -78,6 +78,12 @@ public class MinecraftContext {
             .build();
     }
 
+    public static MinecraftContext forAe2Craft(String username, String content) {
+        return new Builder().username(username)
+            .content(content)
+            .build();
+    }
+
     public static MinecraftContext forEmpty() {
         return new Builder().build();
     }

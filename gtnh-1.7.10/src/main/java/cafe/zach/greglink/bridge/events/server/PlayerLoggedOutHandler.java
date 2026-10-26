@@ -13,6 +13,8 @@ public class PlayerLoggedOutHandler {
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.player == null || event.player instanceof FakePlayer) return;
 
+        AfkHandler.clearPlayer(event.player.getCommandSenderName());
+
         ActionRegistry.fireMinecraft(
             ActionRegistry.ON_MINECRAFT_PLAYER_LEAVE,
             MinecraftContext.forPlayerLeave(

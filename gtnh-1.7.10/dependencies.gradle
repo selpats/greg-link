@@ -36,3 +36,15 @@
 dependencies {
     shadowImplementation("cafe.zach:greg-link-lib")
 }
+
+tasks.named("jar").configure {
+    exclude("pl/kuba6000/**")
+}
+
+tasks.named("shadowJar").configure {
+    exclude("pl/kuba6000/**")
+}
+
+tasks.named("sourcesJar").configure {
+    exclude("pl/kuba6000/**")
+}

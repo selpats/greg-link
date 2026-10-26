@@ -167,6 +167,29 @@ public class MessageFormatter {
             .build();
     }
 
+    public static String formatAe2Craft(MinecraftContext context) {
+        String itemInfo = stripFormatting(context.content);
+        String name = stripFormatting(context.username);
+        if (name != null && !name.isEmpty()) {
+            return String.format("**%s** crafted **%s**", name, itemInfo);
+        }
+        return String.format("Craft completed: **%s**", itemInfo);
+    }
+
+    public static MessageEmbed embedAe2Craft(MinecraftContext context) {
+        String itemInfo = stripFormatting(context.content);
+        String name = stripFormatting(context.username);
+        if (name != null && !name.isEmpty()) {
+            return new EmbedBuilder()
+                .setAuthor(String.format("%s crafted %s", name, itemInfo), null, "attachment://author.png")
+                .setColor(EmbedColors.GREEN)
+                .build();
+        }
+        return new EmbedBuilder().setTitle(String.format("Craft completed: %s", itemInfo))
+            .setColor(EmbedColors.GREEN)
+            .build();
+    }
+
     // Discord -> Minecraft
 
     private static final Pattern EMOJI_LINK_PATTERN = Pattern.compile("\\[[^\\[\\]]*+\\]\\((https?://[^)\\s]++)\\)");
