@@ -139,15 +139,6 @@ public abstract class ConfigHandler {
         }
     }
 
-    public boolean hasRelayCommands() {
-        for (ChannelMapping mapping : channels) {
-            if (mapping.acceptsFromMinecraft() && mapping.filters.relayCommands) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public boolean hasRelayAfk() {
         for (ChannelMapping mapping : channels) {
             if (mapping.acceptsFromMinecraft() && mapping.filters.relayAfk) {

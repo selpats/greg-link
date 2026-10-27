@@ -16,7 +16,6 @@ public class ActionRegistry {
     public static final String ON_DISCORD_MEMBER_LEAVE = "on_discord_member_leave";
 
     public static final String ON_MINECRAFT_CHAT = "on_minecraft_chat";
-    public static final String ON_MINECRAFT_COMMAND = "on_minecraft_command";
     public static final String ON_MINECRAFT_PLAYER_JOIN = "on_minecraft_player_join";
     public static final String ON_MINECRAFT_PLAYER_LEAVE = "on_minecraft_player_leave";
     public static final String ON_MINECRAFT_SERVER_STARTING = "on_minecraft_server_starting";

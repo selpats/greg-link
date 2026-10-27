@@ -113,7 +113,9 @@ public class AvatarUtil {
                 .contentLength();
             if (contentLength > MAX_RESPONSE_BYTES) return null;
 
-            byte[] imageBytes = readBounded(response.body().byteStream());
+            byte[] imageBytes = readBounded(
+                response.body()
+                    .byteStream());
             if (imageBytes == null) return null;
 
             BufferedImage head = readBoundedImage(imageBytes);
@@ -160,7 +162,9 @@ public class AvatarUtil {
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
                 if (
-                    width <= 0 || height <= 0 || width > MAX_SOURCE_DIMENSION || height > MAX_SOURCE_DIMENSION
+                    width <= 0 || height <= 0
+                        || width > MAX_SOURCE_DIMENSION
+                        || height > MAX_SOURCE_DIMENSION
                         || (long) width * height > MAX_SOURCE_PIXELS
                 ) return null;
 

@@ -41,24 +41,6 @@ public class MessageFormatter {
             .build();
     }
 
-    public static String formatChatCommand(MinecraftContext context) {
-        return String.format(
-            "**%s** ran: %s",
-            stripFormatting(context.username),
-            EmojiRegistry.replaceEmojis(stripFormatting(context.content)));
-    }
-
-    public static MessageEmbed embedChatCommand(MinecraftContext context) {
-        return new EmbedBuilder()
-            .setAuthor(
-                String.format("%s ran a command", stripFormatting(context.username)),
-                null,
-                "attachment://author.png")
-            .setDescription(EmojiRegistry.replaceEmojis(stripFormatting(context.content)))
-            .setColor(EmbedColors.COMMAND)
-            .build();
-    }
-
     public static String formatJoin(MinecraftContext context) {
         return String.format("**%s** joined", stripFormatting(context.username));
     }

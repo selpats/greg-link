@@ -7,7 +7,6 @@ public class MinecraftActionRegistry {
 
     public static void register() {
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_CHAT, RelayChatToDiscord.create());
-        ActionRegistry.register(ActionRegistry.ON_MINECRAFT_COMMAND, RelayCommandToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_PLAYER_JOIN, RelayJoinToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_PLAYER_LEAVE, RelayLeaveToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_SERVER_STARTING, RelayServerStartingToDiscord.create());

@@ -18,7 +18,6 @@ public class BridgeManager {
         MinecraftForge.EVENT_BUS.register(new ServerChatHandler());
 
         // Misc
-        MinecraftForge.EVENT_BUS.register(new CommandHandler());
         MinecraftForge.EVENT_BUS.register(new AchievementHandler());
         MinecraftForge.EVENT_BUS.register(new LivingDeathHandler());
 

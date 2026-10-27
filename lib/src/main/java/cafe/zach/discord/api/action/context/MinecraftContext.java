@@ -54,13 +54,6 @@ public class MinecraftContext {
             .build();
     }
 
-    public static MinecraftContext forChatCommand(String username, String uuid, String content) {
-        return new Builder().username(username)
-            .uuid(uuid)
-            .content(content)
-            .build();
-    }
-
     public static MinecraftContext forDeath(String username, String uuid, String content, String worldName,
         String dimensionId) {
         return new Builder().username(username)
