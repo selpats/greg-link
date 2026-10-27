@@ -53,6 +53,8 @@ public abstract class ConfigHandler {
 
     protected void onSave(JsonObject json) {}
 
+    protected void onLoadError(File file, Exception error) {}
+
     public final void load() {
         File file = getConfigFile();
         if (!Files.exists(file.toPath())) {
@@ -63,7 +65,10 @@ public abstract class ConfigHandler {
         try (Reader reader = new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8)) {
             JsonElement element = PARSER.parse(new JsonReader(reader));
 
-            if (!element.isJsonObject()) return;
+            if (!element.isJsonObject()) {
+                onLoadError(file, new JsonParseException("Configuration root must be a JSON object"));
+                return;
+            }
             JsonObject root = element.getAsJsonObject();
 
             if (root.has("bot")) {
@@ -96,7 +101,7 @@ public abstract class ConfigHandler {
             onLoad(root);
 
         } catch (Exception e) {
-            // lib has no logger, let subclass handle if needed
+            onLoadError(file, e);
         }
     }
 

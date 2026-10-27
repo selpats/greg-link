@@ -2,9 +2,12 @@ package cafe.zach.discord.api.action.format;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -21,6 +26,9 @@ public class AvatarUtil {
 
     private static final float HEAD_SCALE = 0.75f;
     private static final int CANVAS_SIZE = 64;
+    private static final int MAX_RESPONSE_BYTES = 8 * 1024;
+    private static final int MAX_SOURCE_DIMENSION = 512;
+    private static final long MAX_SOURCE_PIXELS = 512L * 512L;
     private static final int MAX_CACHE_SIZE = 256;
     private static final long FAILURE_COOLDOWN_MS = 5 * 60 * 1000L;
     private static final Pattern VALID_IDENTIFIER = Pattern.compile("^[A-Za-z0-9_-]{1,36}+$");
@@ -101,9 +109,14 @@ public class AvatarUtil {
             .execute()) {
             if (!response.isSuccessful() || response.body() == null) return null;
 
-            InputStream stream = response.body()
-                .byteStream();
-            BufferedImage head = ImageIO.read(stream);
+            long contentLength = response.body()
+                .contentLength();
+            if (contentLength > MAX_RESPONSE_BYTES) return null;
+
+            byte[] imageBytes = readBounded(response.body().byteStream());
+            if (imageBytes == null) return null;
+
+            BufferedImage head = readBoundedImage(imageBytes);
             if (head == null) return null;
 
             int offset = (CANVAS_SIZE - headSize) / 2;
@@ -118,6 +131,43 @@ public class AvatarUtil {
 
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private static byte[] readBounded(InputStream stream) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[4096];
+        int total = 0;
+        int read;
+        while ((read = stream.read(buffer)) != -1) {
+            total += read;
+            if (total > MAX_RESPONSE_BYTES) return null;
+            out.write(buffer, 0, read);
+        }
+        return out.toByteArray();
+    }
+
+    private static BufferedImage readBoundedImage(byte[] imageBytes) throws IOException {
+        try (ImageInputStream imageInput = ImageIO.createImageInputStream(new ByteArrayInputStream(imageBytes))) {
+            if (imageInput == null) return null;
+
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
+            if (!readers.hasNext()) return null;
+
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(imageInput, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (
+                    width <= 0 || height <= 0 || width > MAX_SOURCE_DIMENSION || height > MAX_SOURCE_DIMENSION
+                        || (long) width * height > MAX_SOURCE_PIXELS
+                ) return null;
+
+                return reader.read(0);
+            } finally {
+                reader.dispose();
+            }
         }
     }
 }

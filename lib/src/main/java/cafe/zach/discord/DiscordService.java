@@ -50,6 +50,7 @@ class DiscordService {
             throw new InvalidDiscordConfigurationException("provided token is empty");
         }
 
+        JDA pendingApi = null;
         try {
             eventPool = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "GregLink-Discord");
@@ -63,24 +64,28 @@ class DiscordService {
                 return t;
             }, new ThreadPoolExecutor.DiscardOldestPolicy());
 
-            api = JDABuilder
+            pendingApi = JDABuilder
                 .createLight(config.discordToken, GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT)
                 .setEventPool(eventPool)
                 .addEventListeners(new ReadyListener(), new OnMessageReceived())
-                .build()
-                .awaitReady();
+                .build();
+            pendingApi.awaitReady();
+            api = pendingApi;
 
             running.set(true);
 
         } catch (InvalidTokenException | IllegalArgumentException e) {
+            shutdownPendingApi(pendingApi);
             destroyPool();
             throw new InvalidDiscordConfigurationException("provided token is invalid");
         } catch (InterruptedException e) {
+            shutdownPendingApi(pendingApi);
             destroyPool();
             Thread.currentThread()
                 .interrupt();
             throw e;
         } catch (Throwable t) {
+            shutdownPendingApi(pendingApi);
             destroyPool();
             throw new InvalidDiscordConfigurationException("failed to initialize JDA: " + t.getMessage());
         }
@@ -212,6 +217,18 @@ class DiscordService {
         if (eventPool != null) {
             eventPool.shutdownNow();
             eventPool = null;
+        }
+    }
+
+    private static void shutdownPendingApi(JDA pendingApi) {
+        if (pendingApi == null) return;
+
+        pendingApi.shutdownNow();
+        try {
+            pendingApi.awaitShutdown(Duration.ofSeconds(2));
+        } catch (InterruptedException e) {
+            Thread.currentThread()
+                .interrupt();
         }
     }
 }
