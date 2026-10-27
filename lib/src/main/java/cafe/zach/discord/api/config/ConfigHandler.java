@@ -2,7 +2,10 @@ package cafe.zach.discord.api.config;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -54,6 +57,8 @@ public abstract class ConfigHandler {
     protected void onSave(JsonObject json) {}
 
     protected void onLoadError(File file, Exception error) {}
+
+    protected void onSaveError(File file, Exception error) {}
 
     public final void load() {
         File file = getConfigFile();
@@ -107,12 +112,8 @@ public abstract class ConfigHandler {
 
     public final void save() {
         File file = getConfigFile();
+        Path tempFile = null;
         try {
-            File parent = file.getParentFile();
-            if (!parent.exists() && !parent.mkdirs()) {
-                throw new IOException("Unable to create directory");
-            }
-
             JsonObject root = new JsonObject();
 
             JsonObject bot = new JsonObject();
@@ -130,12 +131,33 @@ public abstract class ConfigHandler {
 
             onSave(root);
 
-            try (Writer writer = new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)) {
+            Path target = file.toPath()
+                .toAbsolutePath();
+            Path parent = target.getParent();
+            Files.createDirectories(parent);
+            tempFile = Files.createTempFile(parent, file.getName(), ".tmp");
+
+            try (Writer writer = new OutputStreamWriter(Files.newOutputStream(tempFile), StandardCharsets.UTF_8)) {
                 writer.write(GSON.toJson(root));
             }
 
+            try {
+                Files.move(tempFile, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tempFile, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+            tempFile = null;
+
         } catch (Exception e) {
-            // let subclass handle if needed
+            onSaveError(file, e);
+        } finally {
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException e) {
+                    onSaveError(file, e);
+                }
+            }
         }
     }
 

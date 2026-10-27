@@ -32,4 +32,9 @@ public class GregLinkConfig extends ConfigHandler {
     protected void onLoadError(File file, Exception error) {
         GregLink.LOG.error("Failed to load GregLink config from " + file.getAbsolutePath(), error);
     }
+
+    @Override
+    protected void onSaveError(File file, Exception error) {
+        GregLink.LOG.error("Failed to save GregLink config to " + file.getAbsolutePath(), error);
+    }
 }
