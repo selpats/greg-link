@@ -7,8 +7,9 @@ import cafe.zach.discord.api.action.registry.ActionRegistry;
 import cafe.zach.discord.api.config.ConfigHandler;
 import cafe.zach.greglink.Tags;
 import cafe.zach.greglink.bridge.BridgeManager;
-import cafe.zach.greglink.command.ReloadEmojisCommand;
+import cafe.zach.greglink.command.GregLinkCommand;
 import cafe.zach.greglink.config.GregLinkConfig;
+import cafe.zach.greglink.links.AccountLinkManager;
 import cpw.mods.fml.common.event.*;
 
 public class ServerProxy implements IProxy {
@@ -17,6 +18,7 @@ public class ServerProxy implements IProxy {
         GregLinkConfig config = new GregLinkConfig();
         ConfigHandler.setInstance(config);
         config.load();
+        AccountLinkManager.load();
         // pulse a save to update new defaults in the config
         config.save();
 
@@ -32,7 +34,7 @@ public class ServerProxy implements IProxy {
     public void postInit(FMLPostInitializationEvent event) {}
 
     public void serverStarting(FMLServerStartingEvent event) {
-        event.registerServerCommand(new ReloadEmojisCommand());
+        event.registerServerCommand(new GregLinkCommand());
         BridgeManager.connect();
         ActionRegistry.fireMinecraft(ActionRegistry.ON_MINECRAFT_SERVER_STARTING, MinecraftContext.forEmpty());
     }

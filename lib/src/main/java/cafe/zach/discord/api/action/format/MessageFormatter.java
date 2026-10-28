@@ -28,15 +28,23 @@ public class MessageFormatter {
     // Minecraft -> Discord
 
     public static String formatChat(MinecraftContext context) {
+        return formatChat(context, context.content);
+    }
+
+    public static String formatChat(MinecraftContext context, String content) {
         return String.format(
             "**%s** » %s",
             stripFormatting(context.username),
-            EmojiRegistry.replaceEmojis(stripFormatting(context.content)));
+            EmojiRegistry.replaceEmojis(stripFormatting(content)));
     }
 
     public static MessageEmbed embedChat(MinecraftContext context) {
+        return embedChat(context, context.content);
+    }
+
+    public static MessageEmbed embedChat(MinecraftContext context, String content) {
         return new EmbedBuilder().setAuthor(stripFormatting(context.username), null, "attachment://author.png")
-            .setDescription(EmojiRegistry.replaceEmojis(stripFormatting(context.content)))
+            .setDescription(EmojiRegistry.replaceEmojis(stripFormatting(content)))
             .setColor(EmbedColors.CHAT)
             .build();
     }

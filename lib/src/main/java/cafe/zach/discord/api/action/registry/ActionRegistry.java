@@ -12,6 +12,7 @@ public class ActionRegistry {
     // Built-in event keys
     public static final String ON_DISCORD_READY = "on_discord_ready";
     public static final String ON_DISCORD_MESSAGE = "on_discord_message";
+    public static final String ON_DISCORD_DIRECT_MESSAGE = "on_discord_direct_message";
     public static final String ON_DISCORD_MEMBER_JOIN = "on_discord_member_join";
     public static final String ON_DISCORD_MEMBER_LEAVE = "on_discord_member_leave";
 

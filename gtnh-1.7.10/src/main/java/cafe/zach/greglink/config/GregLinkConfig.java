@@ -1,6 +1,7 @@
 package cafe.zach.greglink.config;
 
 import java.io.File;
+import java.util.Locale;
 
 import com.google.gson.*;
 
@@ -9,6 +10,13 @@ import cafe.zach.greglink.GregLink;
 import cpw.mods.fml.common.Loader;
 
 public class GregLinkConfig extends ConfigHandler {
+
+    public enum MentionPriority {
+        DISCORD,
+        MINECRAFT
+    }
+
+    public MentionPriority mentionPriority = MentionPriority.DISCORD;
 
     public static GregLinkConfig get() {
         return (GregLinkConfig) ConfigHandler.getInstance();
@@ -23,10 +31,24 @@ public class GregLinkConfig extends ConfigHandler {
     }
 
     @Override
-    protected void onLoad(JsonObject json) {}
+    protected void onLoad(JsonObject json) {
+        if (!json.has("mentionPriority")) return;
+
+        try {
+            mentionPriority = MentionPriority.valueOf(
+                json.get("mentionPriority")
+                    .getAsString()
+                    .toUpperCase(Locale.ROOT));
+        } catch (RuntimeException e) {
+            GregLink.LOG.warn("Invalid GregLink mentionPriority; using DISCORD.", e);
+            mentionPriority = MentionPriority.DISCORD;
+        }
+    }
 
     @Override
-    protected void onSave(JsonObject json) {}
+    protected void onSave(JsonObject json) {
+        json.addProperty("mentionPriority", mentionPriority.name());
+    }
 
     @Override
     protected void onLoadError(File file, Exception error) {

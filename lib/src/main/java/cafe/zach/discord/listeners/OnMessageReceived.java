@@ -5,6 +5,7 @@ import java.util.List;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.sticker.StickerItem;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -19,8 +20,6 @@ public class OnMessageReceived extends ListenerAdapter {
 
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
-        if (!event.isFromGuild()) return;
-
         User selfUser = event.getJDA()
             .getSelfUser();
         if (
@@ -29,6 +28,23 @@ public class OnMessageReceived extends ListenerAdapter {
         ) return;
 
         Message message = event.getMessage();
+        if (!event.isFromGuild()) {
+            if (!event.isFromType(ChannelType.PRIVATE)) return;
+
+            DiscordContext context = DiscordContext.forDirectMessage(
+                event.getAuthor()
+                    .getName(),
+                event.getAuthor()
+                    .getId(),
+                message.getContentDisplay(),
+                event.getChannel()
+                    .getId(),
+                event.getAuthor()
+                    .isBot());
+            ActionRegistry.fireDiscord(ActionRegistry.ON_DISCORD_DIRECT_MESSAGE, context);
+            return;
+        }
+
         String content = message.getContentDisplay();
 
         List<StickerItem> stickers = message.getStickers();
@@ -83,6 +99,8 @@ public class OnMessageReceived extends ListenerAdapter {
             event.getChannel()
                 .getId(),
             event.getGuild()
+                .getId(),
+            event.getAuthor()
                 .getId(),
             event.getAuthor()
                 .isBot());

@@ -1,8 +1,12 @@
 package cafe.zach.discord;
 
+import java.util.Collection;
+
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
+import cafe.zach.discord.api.action.context.MinecraftContext;
+import cafe.zach.discord.api.action.format.MessageFormatter;
 import cafe.zach.discord.api.config.ConfigHandler;
 import cafe.zach.discord.api.exceptions.InvalidDiscordConfigurationException;
 
@@ -39,6 +43,31 @@ public class DiscordBridge {
         service.sendMessage(channelId, message);
     }
 
+    public static void sendMessage(String channelId, String message, Collection<String> allowedUserMentions) {
+        if (service == null || !service.isRunning()) return;
+        service.sendMessage(channelId, message, allowedUserMentions);
+    }
+
+    public static void sendMinecraftChat(String channelId, MinecraftContext context, String content, boolean useEmbed,
+        Collection<String> allowedUserMentions) {
+        if (service == null || !service.isRunning()) return;
+
+        if (useEmbed) {
+            service.sendEmbedWithAvatarAsync(
+                channelId,
+                MessageFormatter.embedChat(context, content),
+                context.username,
+                allowedUserMentions);
+        } else {
+            service.sendMessage(channelId, MessageFormatter.formatChat(context, content), allowedUserMentions);
+        }
+    }
+
+    public static void sendDirectMessage(String userId, String message) {
+        if (service == null || !service.isRunning()) return;
+        service.sendDirectMessage(userId, message);
+    }
+
     public static void sendEmbed(String channelId, MessageEmbed embed) {
         if (service == null || !service.isRunning()) return;
         service.sendEmbed(channelId, embed);
@@ -52,6 +81,12 @@ public class DiscordBridge {
     public static void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier) {
         if (service == null || !service.isRunning()) return;
         service.sendEmbedWithAvatarAsync(channelId, embed, avatarIdentifier);
+    }
+
+    public static void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier,
+        Collection<String> allowedUserMentions) {
+        if (service == null || !service.isRunning()) return;
+        service.sendEmbedWithAvatarAsync(channelId, embed, avatarIdentifier, allowedUserMentions);
     }
 
     public static boolean isConnected() {

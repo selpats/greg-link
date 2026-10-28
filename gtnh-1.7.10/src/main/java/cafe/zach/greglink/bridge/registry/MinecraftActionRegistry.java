@@ -2,11 +2,12 @@ package cafe.zach.greglink.bridge.registry;
 
 import cafe.zach.discord.api.action.common.minecraft.*;
 import cafe.zach.discord.api.action.registry.ActionRegistry;
+import cafe.zach.greglink.bridge.actions.RelayLinkedChatToDiscord;
 
 public class MinecraftActionRegistry {
 
     public static void register() {
-        ActionRegistry.register(ActionRegistry.ON_MINECRAFT_CHAT, RelayChatToDiscord.create());
+        ActionRegistry.register(ActionRegistry.ON_MINECRAFT_CHAT, RelayLinkedChatToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_PLAYER_JOIN, RelayJoinToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_PLAYER_LEAVE, RelayLeaveToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_SERVER_STARTING, RelayServerStartingToDiscord.create());

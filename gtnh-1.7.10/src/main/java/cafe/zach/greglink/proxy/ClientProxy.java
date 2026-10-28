@@ -1,6 +1,5 @@
 package cafe.zach.greglink.proxy;
 
-import cafe.zach.greglink.command.ReloadEmojisCommand;
 import cpw.mods.fml.common.event.*;
 
 public class ClientProxy implements IProxy {
@@ -11,9 +10,7 @@ public class ClientProxy implements IProxy {
 
     public void postInit(FMLPostInitializationEvent event) {}
 
-    public void serverStarting(FMLServerStartingEvent event) {
-        event.registerServerCommand(new ReloadEmojisCommand());
-    }
+    public void serverStarting(FMLServerStartingEvent event) {}
 
     public void serverStarted(FMLServerStartedEvent event) {}
 
