@@ -39,6 +39,7 @@ public class OnMessageReceived extends ListenerAdapter {
                 message.getContentDisplay(),
                 event.getChannel()
                     .getId(),
+                message.getId(),
                 event.getAuthor()
                     .isBot());
             ActionRegistry.fireDiscord(ActionRegistry.ON_DISCORD_DIRECT_MESSAGE, context);
@@ -102,6 +103,7 @@ public class OnMessageReceived extends ListenerAdapter {
                 .getId(),
             event.getAuthor()
                 .getId(),
+            message.getId(),
             event.getAuthor()
                 .isBot());
 

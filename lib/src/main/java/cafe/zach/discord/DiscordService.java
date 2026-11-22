@@ -161,6 +161,21 @@ class DiscordService {
         action.queue(null, error -> {}); // silently drop failed sends for now, hook for logging later
     }
 
+    public void replyToMessage(String channelId, String messageId, String message) {
+        if (!running.get() || api == null) return;
+
+        TextChannel channel = api.getTextChannelById(channelId);
+        if (channel == null) return;
+
+        MessageCreateAction action = channel.sendMessage(message)
+            .setAllowedMentions(Collections.emptyList())
+            .mentionRepliedUser(false);
+        if (messageId != null && !messageId.isEmpty()) {
+            action.setMessageReference(messageId);
+        }
+        action.queue(null, error -> {});
+    }
+
     public void sendDirectMessage(String userId, String message) {
         if (!running.get() || api == null || userId == null) return;
 

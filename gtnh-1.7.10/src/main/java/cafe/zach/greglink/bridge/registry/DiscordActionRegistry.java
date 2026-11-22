@@ -8,6 +8,7 @@ import cafe.zach.discord.api.action.ChatSender;
 import cafe.zach.discord.api.action.common.discord.BroadcastMessageToChat;
 import cafe.zach.discord.api.action.common.discord.BroadcastReadyToChat;
 import cafe.zach.discord.api.action.registry.ActionRegistry;
+import cafe.zach.greglink.bridge.actions.DiscordCalculatorHandler;
 import cafe.zach.greglink.links.AccountLinkManager;
 
 public class DiscordActionRegistry {
@@ -23,8 +24,10 @@ public class DiscordActionRegistry {
         };
 
         ActionRegistry.register(ActionRegistry.ON_DISCORD_MESSAGE, AccountLinkManager::refreshDiscordName);
+        ActionRegistry.register(ActionRegistry.ON_DISCORD_MESSAGE, DiscordCalculatorHandler::handleMessage);
         ActionRegistry.register(ActionRegistry.ON_DISCORD_MESSAGE, BroadcastMessageToChat.create(sender));
         ActionRegistry.register(ActionRegistry.ON_DISCORD_READY, BroadcastReadyToChat.create(sender));
         ActionRegistry.register(ActionRegistry.ON_DISCORD_DIRECT_MESSAGE, AccountLinkManager::handleDirectMessage);
+        ActionRegistry.register(ActionRegistry.ON_DISCORD_DIRECT_MESSAGE, DiscordCalculatorHandler::handleMessage);
     }
 }

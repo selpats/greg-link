@@ -8,6 +8,7 @@ public class DiscordContext {
     public final String channelId;
     public final String guildId;
     public final String userId;
+    public final String messageId;
     public final boolean directMessage;
     public final boolean isBot;
     public final int guildCount;
@@ -19,6 +20,7 @@ public class DiscordContext {
         this.channelId = builder.channelId;
         this.guildId = builder.guildId;
         this.userId = builder.userId;
+        this.messageId = builder.messageId;
         this.directMessage = builder.directMessage;
         this.isBot = builder.isBot;
         this.guildCount = builder.guildCount;
@@ -41,22 +43,34 @@ public class DiscordContext {
 
     public static DiscordContext forMessage(String username, String replyTo, String content, String channelId,
         String guildId, String userId, boolean isBot) {
+        return forMessage(username, replyTo, content, channelId, guildId, userId, null, isBot);
+    }
+
+    public static DiscordContext forMessage(String username, String replyTo, String content, String channelId,
+        String guildId, String userId, String messageId, boolean isBot) {
         return new Builder().username(username)
             .replyTo(replyTo)
             .content(content)
             .channelId(channelId)
             .guildId(guildId)
             .userId(userId)
+            .messageId(messageId)
             .isBot(isBot)
             .build();
     }
 
     public static DiscordContext forDirectMessage(String username, String userId, String content, String channelId,
         boolean isBot) {
+        return forDirectMessage(username, userId, content, channelId, null, isBot);
+    }
+
+    public static DiscordContext forDirectMessage(String username, String userId, String content, String channelId,
+        String messageId, boolean isBot) {
         return new Builder().username(username)
             .userId(userId)
             .content(content)
             .channelId(channelId)
+            .messageId(messageId)
             .isBot(isBot)
             .directMessage(true)
             .build();
@@ -70,6 +84,7 @@ public class DiscordContext {
         private String channelId;
         private String guildId;
         private String userId;
+        private String messageId;
         private boolean isBot;
         private boolean directMessage;
         private int guildCount;
@@ -101,6 +116,11 @@ public class DiscordContext {
 
         private Builder userId(String userId) {
             this.userId = userId;
+            return this;
+        }
+
+        private Builder messageId(String messageId) {
+            this.messageId = messageId;
             return this;
         }
 

@@ -63,6 +63,11 @@ public class DiscordBridge {
         }
     }
 
+    public static void replyToMessage(String channelId, String messageId, String message) {
+        if (service == null || !service.isRunning()) return;
+        service.replyToMessage(channelId, messageId, message);
+    }
+
     public static void sendDirectMessage(String userId, String message) {
         if (service == null || !service.isRunning()) return;
         service.sendDirectMessage(userId, message);
