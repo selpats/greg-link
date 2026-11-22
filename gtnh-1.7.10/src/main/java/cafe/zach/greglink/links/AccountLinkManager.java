@@ -204,9 +204,11 @@ public final class AccountLinkManager {
             saved = addLink(pending.minecraftUuid, pending.minecraftName, context.userId, context.username);
         }
         if (saved) {
-            DiscordBridge.sendDirectMessage(
-                context.userId,
-                "Linked Minecraft account " + pending.minecraftName + " to this Discord account.");
+            String message = "Linked Minecraft account " + pending.minecraftName + " to this Discord account.";
+            if (!isMentionsEnabled()) {
+                message += " (Note: Discord mentions from Minecraft chat are currently disabled in the server config.)";
+            }
+            DiscordBridge.sendDirectMessage(context.userId, message);
         } else {
             DiscordBridge.sendDirectMessage(
                 context.userId,
@@ -214,11 +216,20 @@ public final class AccountLinkManager {
         }
     }
 
+    public static boolean isMentionsEnabled() {
+        GregLinkConfig config = GregLinkConfig.get();
+        return config == null || config.enableMentions;
+    }
+
     public static MentionedMessage resolveMinecraftMentions(String content) {
         if (content == null || content.isEmpty()) return new MentionedMessage(content, Collections.emptyList());
 
         String safeContent = RAW_DISCORD_MENTION.matcher(content)
             .replaceAll(" ");
+        if (!isMentionsEnabled()) {
+            return new MentionedMessage(safeContent, Collections.emptyList());
+        }
+
         Matcher matcher = NAMED_MENTION.matcher(safeContent);
         StringBuffer output = new StringBuffer(safeContent.length());
         Set<String> mentionIds = new LinkedHashSet<>();

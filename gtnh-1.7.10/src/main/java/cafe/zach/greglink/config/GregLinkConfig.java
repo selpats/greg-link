@@ -16,6 +16,7 @@ public class GregLinkConfig extends ConfigHandler {
         MINECRAFT
     }
 
+    public boolean enableMentions = true;
     public MentionPriority mentionPriority = MentionPriority.DISCORD;
 
     public static GregLinkConfig get() {
@@ -32,6 +33,16 @@ public class GregLinkConfig extends ConfigHandler {
 
     @Override
     protected void onLoad(JsonObject json) {
+        if (json.has("enableMentions")) {
+            try {
+                enableMentions = json.get("enableMentions")
+                    .getAsBoolean();
+            } catch (RuntimeException e) {
+                GregLink.LOG.warn("Invalid GregLink enableMentions; using true.", e);
+                enableMentions = true;
+            }
+        }
+
         if (!json.has("mentionPriority")) return;
 
         try {
@@ -47,6 +58,7 @@ public class GregLinkConfig extends ConfigHandler {
 
     @Override
     protected void onSave(JsonObject json) {
+        json.addProperty("enableMentions", enableMentions);
         json.addProperty("mentionPriority", mentionPriority.name());
     }
 

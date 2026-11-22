@@ -61,10 +61,14 @@ public abstract class ConfigHandler {
     protected void onSaveError(File file, Exception error) {}
 
     public final void load() {
+        tryLoad();
+    }
+
+    public final boolean tryLoad() {
         File file = getConfigFile();
         if (!Files.exists(file.toPath())) {
             save();
-            return;
+            return true;
         }
 
         try (Reader reader = new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8)) {
@@ -72,7 +76,7 @@ public abstract class ConfigHandler {
 
             if (!element.isJsonObject()) {
                 onLoadError(file, new JsonParseException("Configuration root must be a JSON object"));
-                return;
+                return false;
             }
             JsonObject root = element.getAsJsonObject();
 
@@ -104,9 +108,11 @@ public abstract class ConfigHandler {
             }
 
             onLoad(root);
+            return true;
 
         } catch (Exception e) {
             onLoadError(file, e);
+            return false;
         }
     }
 

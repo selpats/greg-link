@@ -7,10 +7,12 @@ import java.util.UUID;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.EnumChatFormatting;
 
 import cafe.zach.discord.api.action.format.EmojiRegistry;
+import cafe.zach.greglink.bridge.BridgeManager;
 import cafe.zach.greglink.links.AccountLinkManager;
 
 public class GregLinkCommand extends CommandBase {
@@ -24,7 +26,10 @@ public class GregLinkCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/greglink <link|unlink>";
+        if (hasAdminPermission(sender)) {
+            return "/greglink <link|unlink|emoji_reload|reload>";
+        }
+        return "/greglink <link|unlink|emoji_reload>";
     }
 
     @Override
@@ -34,41 +39,8 @@ public class GregLinkCommand extends CommandBase {
 
     @Override
     public void processCommand(ICommandSender sender, String[] args) {
-        if (!(sender instanceof EntityPlayerMP)) {
-            send(sender, EnumChatFormatting.RED, "This command can only be used by a player.");
-            return;
-        }
         if (args.length != 1) {
             send(sender, EnumChatFormatting.YELLOW, getCommandUsage(sender));
-            return;
-        }
-
-        EntityPlayerMP player = (EntityPlayerMP) sender;
-        UUID minecraftUuid = player.getUniqueID();
-        if ("link".equalsIgnoreCase(args[0])) {
-            String code = AccountLinkManager.createCode(minecraftUuid, player.getCommandSenderName());
-            if (code == null) {
-                send(sender, EnumChatFormatting.RED, "Please wait before requesting another link code.");
-                return;
-            }
-            send(
-                sender,
-                EnumChatFormatting.GREEN,
-                "DM the GregLink bot this one-time code: " + EnumChatFormatting.GOLD
-                    + code
-                    + EnumChatFormatting.GREEN
-                    + ". It expires in 10 minutes.");
-            return;
-        }
-
-        if ("unlink".equalsIgnoreCase(args[0])) {
-            if (!AccountLinkManager.isLinked(minecraftUuid)) {
-                send(sender, EnumChatFormatting.YELLOW, "Your Minecraft account is not linked.");
-            } else if (AccountLinkManager.unlink(minecraftUuid)) {
-                send(sender, EnumChatFormatting.GREEN, "Your Minecraft and Discord accounts are unlinked.");
-            } else {
-                send(sender, EnumChatFormatting.RED, "The unlink could not be saved. Check the GregLink log.");
-            }
             return;
         }
 
@@ -88,15 +60,85 @@ public class GregLinkCommand extends CommandBase {
             return;
         }
 
+        if ("reload".equalsIgnoreCase(args[0])) {
+            if (!hasAdminPermission(sender)) {
+                send(sender, EnumChatFormatting.RED, "You do not have permission to reload the GregLink config.");
+                return;
+            }
+            if (BridgeManager.reload()) {
+                send(sender, EnumChatFormatting.GREEN, "Reloaded GregLink configuration and account links.");
+            } else {
+                send(
+                    sender,
+                    EnumChatFormatting.RED,
+                    "Failed to reload GregLink config. Check the server log for details.");
+            }
+            return;
+        }
+
+        if ("link".equalsIgnoreCase(args[0]) || "unlink".equalsIgnoreCase(args[0])) {
+            if (!(sender instanceof EntityPlayerMP)) {
+                send(sender, EnumChatFormatting.RED, "This command can only be used by a player.");
+                return;
+            }
+
+            EntityPlayerMP player = (EntityPlayerMP) sender;
+            UUID minecraftUuid = player.getUniqueID();
+            if ("link".equalsIgnoreCase(args[0])) {
+                String code = AccountLinkManager.createCode(minecraftUuid, player.getCommandSenderName());
+                if (code == null) {
+                    send(sender, EnumChatFormatting.RED, "Please wait before requesting another link code.");
+                    return;
+                }
+                send(
+                    sender,
+                    EnumChatFormatting.GREEN,
+                    "DM the GregLink bot this one-time code: " + EnumChatFormatting.GOLD
+                        + code
+                        + EnumChatFormatting.GREEN
+                        + ". It expires in 10 minutes.");
+                if (!AccountLinkManager.isMentionsEnabled()) {
+                    send(
+                        sender,
+                        EnumChatFormatting.YELLOW,
+                        "Note: Discord mentions from Minecraft chat are currently disabled in the server config.");
+                }
+                return;
+            }
+
+            if (!AccountLinkManager.isLinked(minecraftUuid)) {
+                send(sender, EnumChatFormatting.YELLOW, "Your Minecraft account is not linked.");
+            } else if (AccountLinkManager.unlink(minecraftUuid)) {
+                send(sender, EnumChatFormatting.GREEN, "Your Minecraft and Discord accounts are unlinked.");
+            } else {
+                send(sender, EnumChatFormatting.RED, "The unlink could not be saved. Check the GregLink log.");
+            }
+            return;
+        }
+
         send(sender, EnumChatFormatting.YELLOW, getCommandUsage(sender));
     }
 
     @Override
     public List<String> addTabCompletionOptions(ICommandSender sender, String[] args) {
         if (args.length == 1) {
+            if (hasAdminPermission(sender)) {
+                return getListOfStringsMatchingLastWord(args, "link", "unlink", "emoji_reload", "reload");
+            }
             return getListOfStringsMatchingLastWord(args, "link", "unlink", "emoji_reload");
         }
         return Collections.emptyList();
+    }
+
+    private static boolean hasAdminPermission(ICommandSender sender) {
+        if (!(sender instanceof EntityPlayerMP)) {
+            return true;
+        }
+        EntityPlayerMP player = (EntityPlayerMP) sender;
+        MinecraftServer server = MinecraftServer.getServer();
+        if (server == null) return false;
+        return server.isSinglePlayer() || (server.getConfigurationManager() != null && server.getConfigurationManager()
+            .func_152596_g(player.getGameProfile()));
     }
 
     private static void send(ICommandSender sender, EnumChatFormatting color, String message) {
