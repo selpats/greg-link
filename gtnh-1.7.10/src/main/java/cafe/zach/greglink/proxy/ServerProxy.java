@@ -40,6 +40,7 @@ public class ServerProxy implements IProxy {
     }
 
     public void serverStarted(FMLServerStartedEvent event) {
+        BridgeManager.onServerStarted();
         ActionRegistry.fireMinecraft(ActionRegistry.ON_MINECRAFT_SERVER_STARTED, MinecraftContext.forEmpty());
     }
 

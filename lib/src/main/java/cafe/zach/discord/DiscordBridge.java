@@ -1,6 +1,8 @@
 package cafe.zach.discord;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.function.Consumer;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -48,6 +50,16 @@ public class DiscordBridge {
         service.sendMessage(channelId, message, allowedUserMentions);
     }
 
+    public static void sendMessageWithCallback(String channelId, String message, Consumer<String> messageIdCallback) {
+        if (service == null || !service.isRunning()) return;
+        service.sendMessage(channelId, message, Collections.emptyList(), messageIdCallback);
+    }
+
+    public static void editMessage(String channelId, String messageId, String message) {
+        if (service == null || !service.isRunning()) return;
+        service.editMessage(channelId, messageId, message);
+    }
+
     public static void sendMinecraftChat(String channelId, MinecraftContext context, String content, boolean useEmbed,
         Collection<String> allowedUserMentions) {
         if (service == null || !service.isRunning()) return;
@@ -60,6 +72,38 @@ public class DiscordBridge {
                 allowedUserMentions);
         } else {
             service.sendMessage(channelId, MessageFormatter.formatChat(context, content), allowedUserMentions);
+        }
+    }
+
+    public static void sendPowerfail(String channelId, String ownerName, String machineInfo, int count,
+        boolean useEmbed, Consumer<String> messageIdCallback) {
+        if (service == null || !service.isRunning()) return;
+
+        if (useEmbed) {
+            MessageEmbed embed = MessageFormatter.embedPowerfail(ownerName, machineInfo, count);
+            if (ownerName != null && !ownerName.isEmpty()) {
+                service
+                    .sendEmbedWithAvatarAsync(channelId, embed, ownerName, Collections.emptyList(), messageIdCallback);
+            } else {
+                service.sendEmbed(channelId, embed, messageIdCallback);
+            }
+        } else {
+            service.sendMessage(
+                channelId,
+                MessageFormatter.formatPowerfail(ownerName, machineInfo, count),
+                Collections.emptyList(),
+                messageIdCallback);
+        }
+    }
+
+    public static void editPowerfail(String channelId, String messageId, String ownerName, String machineInfo,
+        int count, boolean useEmbed) {
+        if (service == null || !service.isRunning()) return;
+
+        if (useEmbed) {
+            service.editEmbed(channelId, messageId, MessageFormatter.embedPowerfail(ownerName, machineInfo, count));
+        } else {
+            service.editMessage(channelId, messageId, MessageFormatter.formatPowerfail(ownerName, machineInfo, count));
         }
     }
 
@@ -78,6 +122,16 @@ public class DiscordBridge {
         service.sendEmbed(channelId, embed);
     }
 
+    public static void sendEmbedWithCallback(String channelId, MessageEmbed embed, Consumer<String> messageIdCallback) {
+        if (service == null || !service.isRunning()) return;
+        service.sendEmbed(channelId, embed, messageIdCallback);
+    }
+
+    public static void editEmbed(String channelId, String messageId, MessageEmbed embed) {
+        if (service == null || !service.isRunning()) return;
+        service.editEmbed(channelId, messageId, embed);
+    }
+
     public static void sendEmbedWithAvatar(String channelId, MessageEmbed embed, byte[] avatar) {
         if (service == null || !service.isRunning()) return;
         service.sendEmbedWithAvatar(channelId, embed, avatar);
@@ -92,6 +146,13 @@ public class DiscordBridge {
         Collection<String> allowedUserMentions) {
         if (service == null || !service.isRunning()) return;
         service.sendEmbedWithAvatarAsync(channelId, embed, avatarIdentifier, allowedUserMentions);
+    }
+
+    public static void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier,
+        Consumer<String> messageIdCallback) {
+        if (service == null || !service.isRunning()) return;
+        service
+            .sendEmbedWithAvatarAsync(channelId, embed, avatarIdentifier, Collections.emptyList(), messageIdCallback);
     }
 
     public static boolean isConnected() {

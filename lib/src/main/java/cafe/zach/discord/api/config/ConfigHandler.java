@@ -28,6 +28,10 @@ public abstract class ConfigHandler {
     public boolean filterAe2CraftingNotifications = false;
     public int ae2AlwaysNotifyAfterMinutes = 60;
 
+    // gregtech powerfail notifications
+    public boolean enableGtPowerfailNotifications = false;
+    public int gtPowerfailMergeWindowMinutes = 5;
+
     // server
     // not yet used
 
@@ -107,6 +111,21 @@ public abstract class ConfigHandler {
                 }
             }
 
+            if (
+                root.has("gregtechPowerfail") && root.get("gregtechPowerfail")
+                    .isJsonObject()
+            ) {
+                JsonObject gt = root.getAsJsonObject("gregtechPowerfail");
+                if (gt.has("enabled")) {
+                    enableGtPowerfailNotifications = gt.get("enabled")
+                        .getAsBoolean();
+                }
+                if (gt.has("mergeWindowMinutes")) {
+                    gtPowerfailMergeWindowMinutes = gt.get("mergeWindowMinutes")
+                        .getAsInt();
+                }
+            }
+
             onLoad(root);
             return true;
 
@@ -134,6 +153,11 @@ public abstract class ConfigHandler {
             ae2.addProperty("filterCraftingNotifications", filterAe2CraftingNotifications);
             ae2.addProperty("alwaysNotifyAfterMinutes", ae2AlwaysNotifyAfterMinutes);
             root.add("ae2WebIntegration", ae2);
+
+            JsonObject gt = new JsonObject();
+            gt.addProperty("enabled", enableGtPowerfailNotifications);
+            gt.addProperty("mergeWindowMinutes", gtPowerfailMergeWindowMinutes);
+            root.add("gregtechPowerfail", gt);
 
             onSave(root);
 

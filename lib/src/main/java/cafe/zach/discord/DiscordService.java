@@ -10,6 +10,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -148,6 +149,11 @@ class DiscordService {
     }
 
     public void sendMessage(String channelId, String message, Collection<String> allowedUserMentions) {
+        sendMessage(channelId, message, allowedUserMentions, null);
+    }
+
+    public void sendMessage(String channelId, String message, Collection<String> allowedUserMentions,
+        Consumer<String> messageIdCallback) {
         if (!running.get() || api == null) return;
 
         TextChannel channel = api.getTextChannelById(channelId);
@@ -158,7 +164,22 @@ class DiscordService {
         if (allowedUserMentions != null && !allowedUserMentions.isEmpty()) {
             action.mentionUsers(allowedUserMentions);
         }
-        action.queue(null, error -> {}); // silently drop failed sends for now, hook for logging later
+        action.queue(sent -> {
+            if (messageIdCallback != null && sent != null) {
+                messageIdCallback.accept(sent.getId());
+            }
+        }, error -> {}); // silently drop failed sends for now, hook for logging later
+    }
+
+    public void editMessage(String channelId, String messageId, String message) {
+        if (!running.get() || api == null || messageId == null || messageId.isEmpty()) return;
+
+        TextChannel channel = api.getTextChannelById(channelId);
+        if (channel == null) return;
+
+        channel.editMessageById(messageId, message)
+            .setAllowedMentions(Collections.emptyList())
+            .queue(null, error -> {});
     }
 
     public void replyToMessage(String channelId, String messageId, String message) {
@@ -198,6 +219,10 @@ class DiscordService {
     }
 
     public void sendEmbed(String channelId, MessageEmbed embed) {
+        sendEmbed(channelId, embed, null);
+    }
+
+    public void sendEmbed(String channelId, MessageEmbed embed, Consumer<String> messageIdCallback) {
         if (!running.get() || api == null) return;
 
         TextChannel channel = api.getTextChannelById(channelId);
@@ -205,15 +230,35 @@ class DiscordService {
 
         channel.sendMessageEmbeds(embed)
             .setAllowedMentions(Collections.emptyList())
+            .queue(sent -> {
+                if (messageIdCallback != null && sent != null) {
+                    messageIdCallback.accept(sent.getId());
+                }
+            }, error -> {});
+    }
+
+    public void editEmbed(String channelId, String messageId, MessageEmbed embed) {
+        if (!running.get() || api == null || messageId == null || messageId.isEmpty()) return;
+
+        TextChannel channel = api.getTextChannelById(channelId);
+        if (channel == null) return;
+
+        channel.editMessageEmbedsById(messageId, embed)
+            .setAllowedMentions(Collections.emptyList())
             .queue(null, error -> {});
     }
 
     public void sendEmbedWithAvatar(String channelId, MessageEmbed embed, byte[] avatar) {
-        sendEmbedWithAvatar(channelId, embed, avatar, Collections.emptyList());
+        sendEmbedWithAvatar(channelId, embed, avatar, Collections.emptyList(), null);
     }
 
     public void sendEmbedWithAvatar(String channelId, MessageEmbed embed, byte[] avatar,
         Collection<String> allowedUserMentions) {
+        sendEmbedWithAvatar(channelId, embed, avatar, allowedUserMentions, null);
+    }
+
+    public void sendEmbedWithAvatar(String channelId, MessageEmbed embed, byte[] avatar,
+        Collection<String> allowedUserMentions, Consumer<String> messageIdCallback) {
         if (!running.get() || api == null) return;
 
         TextChannel channel = api.getTextChannelById(channelId);
@@ -230,44 +275,50 @@ class DiscordService {
 
             MessageCreateAction action = channel.sendFiles(FileUpload.fromData(avatar, filename))
                 .setEmbeds(embed);
-            sendEmbedAction(action, allowedUserMentions);
+            sendEmbedAction(action, allowedUserMentions, messageIdCallback);
         } else {
             // fall back to embed without avatar if fetch failed
-            sendEmbedAction(channel.sendMessageEmbeds(embed), allowedUserMentions);
+            sendEmbedAction(channel.sendMessageEmbeds(embed), allowedUserMentions, messageIdCallback);
         }
     }
 
     public void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier) {
-        sendEmbedWithAvatarAsync(channelId, embed, avatarIdentifier, Collections.emptyList());
+        sendEmbedWithAvatarAsync(channelId, embed, avatarIdentifier, Collections.emptyList(), null);
     }
 
     public void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier,
         Collection<String> allowedUserMentions) {
+        sendEmbedWithAvatarAsync(channelId, embed, avatarIdentifier, allowedUserMentions, null);
+    }
+
+    public void sendEmbedWithAvatarAsync(String channelId, MessageEmbed embed, String avatarIdentifier,
+        Collection<String> allowedUserMentions, Consumer<String> messageIdCallback) {
         if (!running.get() || api == null) return;
 
         byte[] cachedAvatar = AvatarUtil.getCachedAvatar(avatarIdentifier);
         if (cachedAvatar != null) {
-            sendEmbedWithAvatar(channelId, embed, cachedAvatar, allowedUserMentions);
+            sendEmbedWithAvatar(channelId, embed, cachedAvatar, allowedUserMentions, messageIdCallback);
             return;
         }
 
         ExecutorService pool = avatarPool;
         if (pool == null || pool.isShutdown()) {
-            sendEmbedWithAvatar(channelId, embed, null, allowedUserMentions);
+            sendEmbedWithAvatar(channelId, embed, null, allowedUserMentions, messageIdCallback);
             return;
         }
 
         try {
             pool.execute(() -> {
                 byte[] avatar = AvatarUtil.fetchPaddedAvatar(avatarIdentifier);
-                sendEmbedWithAvatar(channelId, embed, avatar, allowedUserMentions);
+                sendEmbedWithAvatar(channelId, embed, avatar, allowedUserMentions, messageIdCallback);
             });
         } catch (RejectedExecutionException ignored) {
-            sendEmbedWithAvatar(channelId, embed, null, allowedUserMentions);
+            sendEmbedWithAvatar(channelId, embed, null, allowedUserMentions, messageIdCallback);
         }
     }
 
-    private static void sendEmbedAction(MessageCreateAction action, Collection<String> allowedUserMentions) {
+    private static void sendEmbedAction(MessageCreateAction action, Collection<String> allowedUserMentions,
+        Consumer<String> messageIdCallback) {
         action.setAllowedMentions(Collections.emptyList());
         if (allowedUserMentions != null && !allowedUserMentions.isEmpty()) {
             StringBuilder content = new StringBuilder();
@@ -280,7 +331,11 @@ class DiscordService {
             action.setContent(content.toString())
                 .mentionUsers(allowedUserMentions);
         }
-        action.queue(null, error -> {});
+        action.queue(sent -> {
+            if (messageIdCallback != null && sent != null) {
+                messageIdCallback.accept(sent.getId());
+            }
+        }, error -> {});
     }
 
     public boolean isRunning() {

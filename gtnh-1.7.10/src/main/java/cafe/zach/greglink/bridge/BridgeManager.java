@@ -52,8 +52,13 @@ public class BridgeManager {
         }
     }
 
+    public static void onServerStarted() {
+        GtPowerfailHandler.register();
+    }
+
     public static void disconnect() {
         AfkHandler.unregister();
+        GtPowerfailHandler.clear();
         DiscordBridge.shutdown();
     }
 
@@ -71,6 +76,7 @@ public class BridgeManager {
         AccountLinkManager.load();
         AfkHandler.register();
         Ae2WebIntegrationHandler.register();
+        GtPowerfailHandler.register();
 
         String newToken = updated.discordToken != null ? updated.discordToken : "";
         if (!newToken.equals(previousToken) || !DiscordBridge.isConnected()) {

@@ -180,6 +180,31 @@ public class MessageFormatter {
             .build();
     }
 
+    public static String formatPowerfail(String ownerName, String machineInfo, int count) {
+        String info = stripFormatting(machineInfo);
+        String name = stripFormatting(ownerName);
+        String countSuffix = count > 1 ? String.format(" (x%d)", count) : "";
+        if (name != null && !name.isEmpty()) {
+            return String.format("\u26A1 **%s**: **%s**%s", name, info, countSuffix);
+        }
+        return String.format("\u26A1 Powerfail: **%s**%s", info, countSuffix);
+    }
+
+    public static MessageEmbed embedPowerfail(String ownerName, String machineInfo, int count) {
+        String info = stripFormatting(machineInfo);
+        String name = stripFormatting(ownerName);
+        String countSuffix = count > 1 ? String.format(" (x%d)", count) : "";
+        if (name != null && !name.isEmpty()) {
+            return new EmbedBuilder()
+                .setAuthor(String.format("%s: %s%s", name, info, countSuffix), null, "attachment://author.png")
+                .setColor(EmbedColors.ORANGE)
+                .build();
+        }
+        return new EmbedBuilder().setTitle(String.format("\u26A1 Powerfail: %s%s", info, countSuffix))
+            .setColor(EmbedColors.ORANGE)
+            .build();
+    }
+
     // Discord -> Minecraft
 
     private static final Pattern EMOJI_LINK_PATTERN = Pattern.compile("\\[[^\\[\\]]*+\\]\\((https?://[^)\\s]++)\\)");
