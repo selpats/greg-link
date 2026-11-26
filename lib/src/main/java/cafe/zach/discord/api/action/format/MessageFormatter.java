@@ -14,6 +14,16 @@ import cafe.zach.discord.api.action.context.MinecraftContext;
 public class MessageFormatter {
 
     private static final Pattern FORMATTING_PATTERN = Pattern.compile("(?i)\\u00a7[0-9a-fk-or]");
+    private static final int MAX_EMBED_AUTHOR = 256;
+    private static final int MAX_EMBED_TITLE = 256;
+    private static final int MAX_EMBED_DESCRIPTION = 4096;
+    private static final int MAX_MESSAGE_CONTENT = 2000;
+
+    public static String truncate(String text, int maxLength) {
+        if (text == null || text.length() <= maxLength) return text;
+        if (maxLength <= 3) return text.substring(0, Math.max(0, maxLength));
+        return text.substring(0, maxLength - 3) + "...";
+    }
 
     public static String stripFormatting(String text) {
         if (text == null || text.isEmpty() || text.indexOf('\u00a7') == -1) return text;
@@ -32,10 +42,12 @@ public class MessageFormatter {
     }
 
     public static String formatChat(MinecraftContext context, String content) {
-        return String.format(
-            "**%s** » %s",
-            stripFormatting(context.username),
-            EmojiRegistry.replaceEmojis(stripFormatting(content)));
+        return truncate(
+            String.format(
+                "**%s** » %s",
+                stripFormatting(context.username),
+                EmojiRegistry.replaceEmojis(stripFormatting(content))),
+            MAX_MESSAGE_CONTENT);
     }
 
     public static MessageEmbed embedChat(MinecraftContext context) {
@@ -43,8 +55,9 @@ public class MessageFormatter {
     }
 
     public static MessageEmbed embedChat(MinecraftContext context, String content) {
-        return new EmbedBuilder().setAuthor(stripFormatting(context.username), null, "attachment://author.png")
-            .setDescription(EmojiRegistry.replaceEmojis(stripFormatting(content)))
+        return new EmbedBuilder()
+            .setAuthor(truncate(stripFormatting(context.username), MAX_EMBED_AUTHOR), null, "attachment://author.png")
+            .setDescription(truncate(EmojiRegistry.replaceEmojis(stripFormatting(content)), MAX_EMBED_DESCRIPTION))
             .setColor(EmbedColors.CHAT)
             .build();
     }
@@ -133,24 +146,30 @@ public class MessageFormatter {
     }
 
     public static String formatPlayerDeath(MinecraftContext context) {
-        return String.format("☠️ %s", stripFormatting(context.content));
+        return truncate(String.format("☠️ %s", stripFormatting(context.content)), MAX_MESSAGE_CONTENT);
     }
 
     public static MessageEmbed embedPlayerDeath(MinecraftContext context) {
-        return new EmbedBuilder().setAuthor(stripFormatting(context.content), null, "attachment://author.png")
+        return new EmbedBuilder()
+            .setAuthor(truncate(stripFormatting(context.content), MAX_EMBED_AUTHOR), null, "attachment://author.png")
             .setColor(EmbedColors.RED)
             .build();
     }
 
     public static String formatAchievement(MinecraftContext context) {
-        return String
-            .format("**%s** achieved **%s**", stripFormatting(context.username), stripFormatting(context.content));
+        return truncate(
+            String
+                .format("**%s** achieved **%s**", stripFormatting(context.username), stripFormatting(context.content)),
+            MAX_MESSAGE_CONTENT);
     }
 
     public static MessageEmbed embedAchievement(MinecraftContext context) {
         return new EmbedBuilder()
             .setAuthor(
-                String.format("%s achieved %s", stripFormatting(context.username), stripFormatting(context.content)),
+                truncate(
+                    String
+                        .format("%s achieved %s", stripFormatting(context.username), stripFormatting(context.content)),
+                    MAX_EMBED_AUTHOR),
                 null,
                 "attachment://author.png")
             .setColor(EmbedColors.GOLD)
@@ -161,9 +180,9 @@ public class MessageFormatter {
         String itemInfo = stripFormatting(context.content);
         String name = stripFormatting(context.username);
         if (name != null && !name.isEmpty()) {
-            return String.format("**%s** crafted **%s**", name, itemInfo);
+            return truncate(String.format("**%s** crafted **%s**", name, itemInfo), MAX_MESSAGE_CONTENT);
         }
-        return String.format("Craft completed: **%s**", itemInfo);
+        return truncate(String.format("Craft completed: **%s**", itemInfo), MAX_MESSAGE_CONTENT);
     }
 
     public static MessageEmbed embedAe2Craft(MinecraftContext context) {
@@ -171,11 +190,14 @@ public class MessageFormatter {
         String name = stripFormatting(context.username);
         if (name != null && !name.isEmpty()) {
             return new EmbedBuilder()
-                .setAuthor(String.format("%s crafted %s", name, itemInfo), null, "attachment://author.png")
+                .setAuthor(
+                    truncate(String.format("%s crafted %s", name, itemInfo), MAX_EMBED_AUTHOR),
+                    null,
+                    "attachment://author.png")
                 .setColor(EmbedColors.GREEN)
                 .build();
         }
-        return new EmbedBuilder().setTitle(String.format("Craft completed: %s", itemInfo))
+        return new EmbedBuilder().setTitle(truncate(String.format("Craft completed: %s", itemInfo), MAX_EMBED_TITLE))
             .setColor(EmbedColors.GREEN)
             .build();
     }
@@ -185,9 +207,9 @@ public class MessageFormatter {
         String name = stripFormatting(ownerName);
         String countSuffix = count > 1 ? String.format(" (x%d)", count) : "";
         if (name != null && !name.isEmpty()) {
-            return String.format("\u26A1 **%s**: **%s**%s", name, info, countSuffix);
+            return truncate(String.format("\u26A1 **%s**: **%s**%s", name, info, countSuffix), MAX_MESSAGE_CONTENT);
         }
-        return String.format("\u26A1 Powerfail: **%s**%s", info, countSuffix);
+        return truncate(String.format("\u26A1 Powerfail: **%s**%s", info, countSuffix), MAX_MESSAGE_CONTENT);
     }
 
     public static MessageEmbed embedPowerfail(String ownerName, String machineInfo, int count) {
@@ -196,11 +218,15 @@ public class MessageFormatter {
         String countSuffix = count > 1 ? String.format(" (x%d)", count) : "";
         if (name != null && !name.isEmpty()) {
             return new EmbedBuilder()
-                .setAuthor(String.format("%s: %s%s", name, info, countSuffix), null, "attachment://author.png")
+                .setAuthor(
+                    truncate(String.format("%s: %s%s", name, info, countSuffix), MAX_EMBED_AUTHOR),
+                    null,
+                    "attachment://author.png")
                 .setColor(EmbedColors.ORANGE)
                 .build();
         }
-        return new EmbedBuilder().setTitle(String.format("\u26A1 Powerfail: %s%s", info, countSuffix))
+        return new EmbedBuilder()
+            .setTitle(truncate(String.format("\u26A1 Powerfail: %s%s", info, countSuffix), MAX_EMBED_TITLE))
             .setColor(EmbedColors.ORANGE)
             .build();
     }

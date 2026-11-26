@@ -53,13 +53,21 @@ public class ActionRegistry {
 
     public static void fireMinecraft(String event, MinecraftContext context) {
         for (IMinecraftAction action : getMinecraftActions(event)) {
-            action.execute(context);
+            try {
+                action.execute(context);
+            } catch (Throwable t) {
+                System.err.println("[GregLink-Discord] Error in Minecraft action for " + event + ": " + t.getMessage());
+            }
         }
     }
 
     public static void fireDiscord(String event, DiscordContext context) {
         for (IDiscordAction action : getDiscordActions(event)) {
-            action.execute(context);
+            try {
+                action.execute(context);
+            } catch (Throwable t) {
+                System.err.println("[GregLink-Discord] Error in Discord action for " + event + ": " + t.getMessage());
+            }
         }
     }
 

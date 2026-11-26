@@ -14,18 +14,22 @@ import cafe.zach.discord.api.exceptions.InvalidDiscordConfigurationException;
 
 public class DiscordBridge {
 
-    private static DiscordService service;
+    private static volatile DiscordService service;
 
     // offer to dependent mod impls, not necessarily needed
     public static EmbedBuilder embedBuilder() {
         return new EmbedBuilder();
     }
 
-    public static void createConnection() throws InvalidDiscordConfigurationException, InterruptedException {
+    public static synchronized void createConnection()
+        throws InvalidDiscordConfigurationException, InterruptedException {
+        if (service != null) {
+            service.awaitDestroy();
+        }
         service = new DiscordService(ConfigHandler.getInstance());
     }
 
-    public static void restart() throws InvalidDiscordConfigurationException, InterruptedException {
+    public static synchronized void restart() throws InvalidDiscordConfigurationException, InterruptedException {
         if (service == null) {
             createConnection();
             return;
@@ -33,7 +37,7 @@ public class DiscordBridge {
         service.restart(ConfigHandler.getInstance());
     }
 
-    public static void shutdown() {
+    public static synchronized void shutdown() {
         if (service != null) {
             service.awaitDestroy();
             service = null;

@@ -16,7 +16,7 @@ import com.google.gson.stream.JsonReader;
 
 public abstract class ConfigHandler {
 
-    private static ConfigHandler INSTANCE;
+    private static volatile ConfigHandler INSTANCE;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting()
         .create();
     private static final JsonParser PARSER = new JsonParser();

@@ -24,6 +24,7 @@ import net.dv8tion.jda.api.utils.FileUpload;
 
 import cafe.zach.discord.api.action.format.AvatarUtil;
 import cafe.zach.discord.api.action.format.EmojiRegistry;
+import cafe.zach.discord.api.action.format.MessageFormatter;
 import cafe.zach.discord.api.config.ConfigHandler;
 import cafe.zach.discord.api.exceptions.InvalidDiscordConfigurationException;
 import cafe.zach.discord.listeners.OnMessageReceived;
@@ -31,9 +32,11 @@ import cafe.zach.discord.listeners.ReadyListener;
 
 class DiscordService {
 
-    private JDA api;
-    private ExecutorService eventPool;
-    private ExecutorService avatarPool;
+    private static final int MAX_MESSAGE_LENGTH = 2000;
+
+    private volatile JDA api;
+    private volatile ExecutorService eventPool;
+    private volatile ExecutorService avatarPool;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public DiscordService(ConfigHandler config) throws InterruptedException, InvalidDiscordConfigurationException {
@@ -154,12 +157,13 @@ class DiscordService {
 
     public void sendMessage(String channelId, String message, Collection<String> allowedUserMentions,
         Consumer<String> messageIdCallback) {
-        if (!running.get() || api == null) return;
+        JDA jda = this.api;
+        if (!running.get() || jda == null || message == null || message.isEmpty()) return;
 
-        TextChannel channel = api.getTextChannelById(channelId);
+        TextChannel channel = jda.getTextChannelById(channelId);
         if (channel == null) return;
 
-        MessageCreateAction action = channel.sendMessage(message)
+        MessageCreateAction action = channel.sendMessage(MessageFormatter.truncate(message, MAX_MESSAGE_LENGTH))
             .setAllowedMentions(Collections.emptyList());
         if (allowedUserMentions != null && !allowedUserMentions.isEmpty()) {
             action.mentionUsers(allowedUserMentions);
@@ -172,23 +176,25 @@ class DiscordService {
     }
 
     public void editMessage(String channelId, String messageId, String message) {
-        if (!running.get() || api == null || messageId == null || messageId.isEmpty()) return;
+        JDA jda = this.api;
+        if (!running.get() || jda == null || messageId == null || messageId.isEmpty() || message == null) return;
 
-        TextChannel channel = api.getTextChannelById(channelId);
+        TextChannel channel = jda.getTextChannelById(channelId);
         if (channel == null) return;
 
-        channel.editMessageById(messageId, message)
+        channel.editMessageById(messageId, MessageFormatter.truncate(message, MAX_MESSAGE_LENGTH))
             .setAllowedMentions(Collections.emptyList())
             .queue(null, error -> {});
     }
 
     public void replyToMessage(String channelId, String messageId, String message) {
-        if (!running.get() || api == null) return;
+        JDA jda = this.api;
+        if (!running.get() || jda == null || message == null || message.isEmpty()) return;
 
-        TextChannel channel = api.getTextChannelById(channelId);
+        TextChannel channel = jda.getTextChannelById(channelId);
         if (channel == null) return;
 
-        MessageCreateAction action = channel.sendMessage(message)
+        MessageCreateAction action = channel.sendMessage(MessageFormatter.truncate(message, MAX_MESSAGE_LENGTH))
             .setAllowedMentions(Collections.emptyList())
             .mentionRepliedUser(false);
         if (messageId != null && !messageId.isEmpty()) {
@@ -198,15 +204,17 @@ class DiscordService {
     }
 
     public void sendDirectMessage(String userId, String message) {
-        if (!running.get() || api == null || userId == null) return;
+        JDA jda = this.api;
+        if (!running.get() || jda == null || userId == null || message == null || message.isEmpty()) return;
 
-        User user = api.getUserById(userId);
+        String safeMessage = MessageFormatter.truncate(message, MAX_MESSAGE_LENGTH);
+        User user = jda.getUserById(userId);
         if (user == null) {
-            api.retrieveUserById(userId)
-                .queue(retrieved -> sendDirectMessage(retrieved, message), error -> {});
+            jda.retrieveUserById(userId)
+                .queue(retrieved -> sendDirectMessage(retrieved, safeMessage), error -> {});
             return;
         }
-        sendDirectMessage(user, message);
+        sendDirectMessage(user, safeMessage);
     }
 
     private void sendDirectMessage(User user, String message) {
@@ -223,9 +231,10 @@ class DiscordService {
     }
 
     public void sendEmbed(String channelId, MessageEmbed embed, Consumer<String> messageIdCallback) {
-        if (!running.get() || api == null) return;
+        JDA jda = this.api;
+        if (!running.get() || jda == null) return;
 
-        TextChannel channel = api.getTextChannelById(channelId);
+        TextChannel channel = jda.getTextChannelById(channelId);
         if (channel == null) return;
 
         channel.sendMessageEmbeds(embed)
@@ -238,9 +247,10 @@ class DiscordService {
     }
 
     public void editEmbed(String channelId, String messageId, MessageEmbed embed) {
-        if (!running.get() || api == null || messageId == null || messageId.isEmpty()) return;
+        JDA jda = this.api;
+        if (!running.get() || jda == null || messageId == null || messageId.isEmpty()) return;
 
-        TextChannel channel = api.getTextChannelById(channelId);
+        TextChannel channel = jda.getTextChannelById(channelId);
         if (channel == null) return;
 
         channel.editMessageEmbedsById(messageId, embed)
@@ -259,9 +269,10 @@ class DiscordService {
 
     public void sendEmbedWithAvatar(String channelId, MessageEmbed embed, byte[] avatar,
         Collection<String> allowedUserMentions, Consumer<String> messageIdCallback) {
-        if (!running.get() || api == null) return;
+        JDA jda = this.api;
+        if (!running.get() || jda == null) return;
 
-        TextChannel channel = api.getTextChannelById(channelId);
+        TextChannel channel = jda.getTextChannelById(channelId);
         if (channel == null) return;
 
         if (

@@ -20,6 +20,7 @@ public final class GtPowerfailHandler {
 
     private static final String MOD_ID = "gregtech";
     private static final long EDIT_DEBOUNCE_MS = 1500L;
+    private static final long PRUNE_INTERVAL_MS = 60_000L;
 
     private static final class ChannelTarget {
 
@@ -39,7 +40,7 @@ public final class GtPowerfailHandler {
         final String machineInfo;
         final Map<String, ChannelTarget> targets = new HashMap<String, ChannelTarget>();
         int count = 1;
-        long lastTimestamp;
+        volatile long lastTimestamp;
         long lastEditSent;
         ScheduledFuture<?> pendingEdit;
 
@@ -51,6 +52,7 @@ public final class GtPowerfailHandler {
     }
 
     private static final ConcurrentHashMap<String, ActivePowerfail> ACTIVE_POWERFAILS = new ConcurrentHashMap<String, ActivePowerfail>();
+    private static volatile long lastPruneTime = 0L;
     private static final ScheduledExecutorService EDIT_SCHEDULER = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "GregLink-PowerfailEdit");
         t.setDaemon(true);
@@ -218,9 +220,15 @@ public final class GtPowerfailHandler {
 
     private static void pruneExpired(long now, long windowMs) {
         if (windowMs <= 0) {
-            ACTIVE_POWERFAILS.clear();
+            if (!ACTIVE_POWERFAILS.isEmpty()) {
+                ACTIVE_POWERFAILS.clear();
+            }
             return;
         }
+        if (now - lastPruneTime < PRUNE_INTERVAL_MS) {
+            return;
+        }
+        lastPruneTime = now;
         ACTIVE_POWERFAILS.entrySet()
             .removeIf(e -> (now - e.getValue().lastTimestamp) > windowMs);
     }
