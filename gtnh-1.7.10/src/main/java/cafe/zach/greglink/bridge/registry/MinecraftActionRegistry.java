@@ -18,5 +18,6 @@ public class MinecraftActionRegistry {
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_DEATH, RelayDeathToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_AFK, RelayAfkToDiscord.create());
         ActionRegistry.register(ActionRegistry.ON_MINECRAFT_AE2_CRAFT, RelayAe2CraftToDiscord.create());
+        ActionRegistry.register(ActionRegistry.ON_MINECRAFT_QUEST, RelayQuestToDiscord.create());
     }
 }

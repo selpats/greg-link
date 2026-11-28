@@ -40,14 +40,17 @@ dependencies {
 tasks.named("jar").configure {
     exclude("pl/kuba6000/**")
     exclude("gregtech/**")
+    exclude("betterquesting/**")
 }
 
 tasks.named("shadowJar").configure {
     exclude("pl/kuba6000/**")
     exclude("gregtech/**")
+    exclude("betterquesting/**")
 }
 
 tasks.named("sourcesJar").configure {
     exclude("pl/kuba6000/**")
     exclude("gregtech/**")
+    exclude("betterquesting/**")
 }

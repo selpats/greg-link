@@ -231,6 +231,30 @@ public class MessageFormatter {
             .build();
     }
 
+    public static String formatQuest(MinecraftContext context) {
+        return truncate(
+            String.format(
+                "**%s** completed quest **%s**",
+                stripFormatting(context.username),
+                stripFormatting(context.content)),
+            MAX_MESSAGE_CONTENT);
+    }
+
+    public static MessageEmbed embedQuest(MinecraftContext context) {
+        return new EmbedBuilder()
+            .setAuthor(
+                truncate(
+                    String.format(
+                        "%s completed quest %s",
+                        stripFormatting(context.username),
+                        stripFormatting(context.content)),
+                    MAX_EMBED_AUTHOR),
+                null,
+                "attachment://author.png")
+            .setColor(EmbedColors.AQUA)
+            .build();
+    }
+
     // Discord -> Minecraft
 
     private static final Pattern EMOJI_LINK_PATTERN = Pattern.compile("\\[[^\\[\\]]*+\\]\\((https?://[^)\\s]++)\\)");

@@ -32,6 +32,9 @@ public abstract class ConfigHandler {
     public boolean enableGtPowerfailNotifications = false;
     public int gtPowerfailMergeWindowMinutes = 5;
 
+    // betterquesting notifications
+    public boolean relayBqQuests = false;
+
     // server
     // not yet used
 
@@ -126,6 +129,17 @@ public abstract class ConfigHandler {
                 }
             }
 
+            if (
+                root.has("betterQuesting") && root.get("betterQuesting")
+                    .isJsonObject()
+            ) {
+                JsonObject bq = root.getAsJsonObject("betterQuesting");
+                if (bq.has("relayQuestCompletions")) {
+                    relayBqQuests = bq.get("relayQuestCompletions")
+                        .getAsBoolean();
+                }
+            }
+
             onLoad(root);
             return true;
 
@@ -158,6 +172,10 @@ public abstract class ConfigHandler {
             gt.addProperty("enabled", enableGtPowerfailNotifications);
             gt.addProperty("mergeWindowMinutes", gtPowerfailMergeWindowMinutes);
             root.add("gregtechPowerfail", gt);
+
+            JsonObject bq = new JsonObject();
+            bq.addProperty("relayQuestCompletions", relayBqQuests);
+            root.add("betterQuesting", bq);
 
             onSave(root);
 

@@ -23,6 +23,7 @@ public class BetterQuestingHelper {
     private static Method qdbGetMethod;
     private static Method translateQuestNameMethod;
     private static Object nativePropsName;
+    private static Object nativePropsSilent;
     private static Method iquestGetPropertyMethod;
 
     public static String formatQuestShare(String message) {
@@ -102,6 +103,10 @@ public class BetterQuestingHelper {
                 Class<?> npClass = Class.forName("betterquesting.api.properties.NativeProps");
                 Field nameField = npClass.getField("NAME");
                 nativePropsName = nameField.get(null);
+                try {
+                    Field silentField = npClass.getField("SILENT");
+                    nativePropsSilent = silentField.get(null);
+                } catch (Throwable ignored) {}
                 Class<?> propTypeClass = Class.forName("betterquesting.api.properties.IPropertyType");
                 iquestGetPropertyMethod = iquestClass.getMethod("getProperty", propTypeClass);
             } catch (Throwable ignored) {}
@@ -153,6 +158,34 @@ public class BetterQuestingHelper {
         } catch (Throwable ignored) {}
 
         return null;
+    }
+
+    public static boolean isSilentQuest(UUID questId) {
+        if (questId == null) return false;
+        if (bqAvailable == null) {
+            try {
+                bqAvailable = Loader.isModLoaded("betterquesting");
+            } catch (Throwable t) {
+                bqAvailable = false;
+            }
+        }
+        if (!bqAvailable) return false;
+        if (!reflectionInitialized) {
+            initReflection();
+        }
+        if (qdbInstance == null || qdbGetMethod == null
+            || iquestGetPropertyMethod == null
+            || nativePropsSilent == null) {
+            return false;
+        }
+        try {
+            Object quest = qdbGetMethod.invoke(qdbInstance, questId);
+            if (quest == null) return false;
+            Object silent = iquestGetPropertyMethod.invoke(quest, nativePropsSilent);
+            return Boolean.TRUE.equals(silent);
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     public static String cleanFormatting(String text) {

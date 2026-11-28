@@ -45,6 +45,7 @@ public class BridgeManager {
     public static void connect() {
         AfkHandler.register();
         Ae2WebIntegrationHandler.register();
+        BetterQuestingQuestHandler.register();
         try {
             DiscordBridge.createConnection();
         } catch (InvalidDiscordConfigurationException | InterruptedException e) {
@@ -58,6 +59,7 @@ public class BridgeManager {
 
     public static void disconnect() {
         AfkHandler.unregister();
+        BetterQuestingQuestHandler.unregister();
         GtPowerfailHandler.clear();
         DiscordBridge.shutdown();
     }
@@ -76,6 +78,7 @@ public class BridgeManager {
         AccountLinkManager.load();
         AfkHandler.register();
         Ae2WebIntegrationHandler.register();
+        BetterQuestingQuestHandler.register();
         GtPowerfailHandler.register();
 
         String newToken = updated.discordToken != null ? updated.discordToken : "";

@@ -77,6 +77,14 @@ public class MinecraftContext {
             .build();
     }
 
+    public static MinecraftContext forQuest(String username, String uuid, String content, String dimensionId) {
+        return new Builder().username(username)
+            .uuid(uuid)
+            .content(content)
+            .dimensionId(dimensionId)
+            .build();
+    }
+
     public static MinecraftContext forEmpty() {
         return new Builder().build();
     }
